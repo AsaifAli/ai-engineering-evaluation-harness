@@ -1,0 +1,8 @@
+{
+  "workflow": "issue-triage",
+  "summary": "Review AI triage for issue #42",
+  "payload": {
+    "priority": "high",
+    "category": "ai-ml"
+  }
+}

@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: ai-engineering-automation-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: AUDIT_DB
+        value: /app/data/audit.db

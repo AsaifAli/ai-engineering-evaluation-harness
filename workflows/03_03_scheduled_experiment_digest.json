@@ -1,0 +1,138 @@
+{
+  "name": "03 - Scheduled Experiment Digest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "daily-schedule",
+      "name": "Daily Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -600,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "experiment",
+              "name": "experiment",
+              "value": "retrieval-eval-001",
+              "type": "string"
+            },
+            {
+              "id": "metrics",
+              "name": "metrics",
+              "value": "={{ { \"recall@5\": 0.81, \"ndcg@10\": 0.74, \"latency_ms\": 420 } }}",
+              "type": "object"
+            },
+            {
+              "id": "baseline",
+              "name": "baseline",
+              "value": "={{ { \"recall@5\": 0.78, \"ndcg@10\": 0.76, \"latency_ms\": 390 } }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "experiment-payload",
+      "name": "Example Experiment Payload",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -320,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/ai/experiment-summary",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "experiment-summary-api",
+      "name": "Experiment Summary API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/approvals",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"workflow\": \"experiment-digest\", \"summary\": $json.summary, \"payload\": $json } }}",
+        "options": {}
+      },
+      "id": "create-approval",
+      "name": "Create Approval",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        320,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Daily Schedule": {
+      "main": [
+        [
+          {
+            "node": "Example Experiment Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Example Experiment Payload": {
+      "main": [
+        [
+          {
+            "node": "Experiment Summary API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Experiment Summary API": {
+      "main": [
+        [
+          {
+            "node": "Create Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "experiment-digest-v2",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

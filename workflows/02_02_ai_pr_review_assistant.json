@@ -1,0 +1,136 @@
+{
+  "name": "02 - AI PR Review Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-pr-review",
+        "responseMode": "onReceived"
+      },
+      "id": "1",
+      "name": "GitHub PR Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const p=$json.body?.pull_request??$json.pull_request??$json; return [{json:{title:p.title||'',body:p.body||'',changed_files:p.changed_files||0,additions:p.additions||0,deletions:p.deletions||0,repository:$json.body?.repository?.full_name||'',author:p.user?.login||''}}];"
+      },
+      "id": "2",
+      "name": "Normalize PR",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/ai/pr-review",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json}}",
+        "options": {}
+      },
+      "id": "3",
+      "name": "AI PR Review API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        460,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/approvals",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {workflow:'pr-review', summary:$json.review_summary, payload:$json} }}",
+        "options": {}
+      },
+      "id": "4",
+      "name": "Create Approval",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        700,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/webhooks/n8n",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json}}",
+        "options": {}
+      },
+      "id": "5",
+      "name": "Audit Hook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        940,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "GitHub PR Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize PR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize PR": {
+      "main": [
+        [
+          {
+            "node": "AI PR Review API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI PR Review API": {
+      "main": [
+        [
+          {
+            "node": "Create Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Approval": {
+      "main": [
+        [
+          {
+            "node": "Audit Hook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "1"
+}

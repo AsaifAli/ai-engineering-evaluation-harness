@@ -1,0 +1,10 @@
+.env
+__pycache__/
+.pytest_cache/
+*.pyc
+data/*.db
+.firecrawl/
+.DS_Store
+*.backup
+.venv/
+venv/
