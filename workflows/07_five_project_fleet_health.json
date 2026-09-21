@@ -1,0 +1,127 @@
+{
+  "name": "07 - Five-Project Fleet Health",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "fleet-health-schedule",
+      "name": "Five-Project Fleet Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://api:8000/api/targets/health",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "fleet-health-read",
+      "name": "Check All Five Project Health",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [250, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const targets = Array.isArray($json.targets) ? $json.targets : [];\nconst required = ['flowpilot', 'legacylens', 'evidenceflow', 'quotesense', 'webqa'];\nconst bySlug = Object.fromEntries(targets.map(item => [item.slug, item]));\nconst results = required.map(slug => {\n  const item = bySlug[slug];\n  return {\n    slug,\n    name: item?.name || slug,\n    status: item?.status || 'missing',\n    configured: Boolean(item?.configured),\n    mode: item?.mode || 'unknown',\n    health_url: item?.health_url || null\n  };\n});\nconst unhealthy = results.filter(item => item.status !== 'healthy');\nreturn [{\n  json: {\n    event: 'five_project_fleet_health',\n    target_count: results.length,\n    healthy_count: results.filter(item => item.status === 'healthy').length,\n    unhealthy_count: unhealthy.length,\n    all_healthy: unhealthy.length === 0,\n    targets: results,\n    unhealthy_targets: unhealthy.map(item => item.slug)\n  }\n}];"
+      },
+      "id": "fleet-health-policy",
+      "name": "Fleet Health Policy",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.all_healthy }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "fleet-health-if",
+      "name": "Fleet Healthy?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [750, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/webhooks/n8n",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"event\":\"five_project_fleet_healthy\",\"target_count\":$json.target_count,\"healthy_count\":$json.healthy_count,\"targets\":$json.targets}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "fleet-health-success",
+      "name": "Record Fleet Healthy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, -80]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/webhooks/n8n",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"event\":\"five_project_fleet_degraded\",\"target_count\":$json.target_count,\"healthy_count\":$json.healthy_count,\"unhealthy_count\":$json.unhealthy_count,\"unhealthy_targets\":$json.unhealthy_targets,\"targets\":$json.targets}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "fleet-health-alert",
+      "name": "Record Fleet Degraded",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 100]
+    }
+  ],
+  "connections": {
+    "Five-Project Fleet Schedule": {
+      "main": [[{"node": "Check All Five Project Health", "type": "main", "index": 0}]]
+    },
+    "Check All Five Project Health": {
+      "main": [[{"node": "Fleet Health Policy", "type": "main", "index": 0}]]
+    },
+    "Fleet Health Policy": {
+      "main": [[{"node": "Fleet Healthy?", "type": "main", "index": 0}]]
+    },
+    "Fleet Healthy?": {
+      "main": [
+        [{"node": "Record Fleet Healthy", "type": "main", "index": 0}],
+        [{"node": "Record Fleet Degraded", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "five-project-fleet-health-v1"
+}

@@ -99,7 +99,7 @@ PYTHONPATH=. python -m pytest -q
 
 ## n8n orchestration
 
-Six importable workflows are included under `workflows/`:
+Seven importable workflows are included under `workflows/`:
 
 1. AI issue triage + approval
 2. AI PR review + approval
@@ -107,6 +107,7 @@ Six importable workflows are included under `workflows/`:
 4. approval decision webhook
 5. LLM health monitor
 6. scheduled five-project AI quality regression gate
+7. scheduled five-project live fleet health check and audit
 
 See `docs/N8N.md`.
 
