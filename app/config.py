@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 
 DB_PATH = os.getenv("AUDIT_DB", "data/audit.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+DB_SCHEMA = os.getenv("DB_SCHEMA", "harness").strip() or "harness"
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "deterministic").strip().lower()
 GATEWAY_BASE_URL = os.getenv("GATEWAY_BASE_URL", "https://portfolio-llm-gateway.onrender.com").rstrip("/")
 GATEWAY_SESSION_TOKEN = os.getenv("GATEWAY_SESSION_TOKEN", "").strip()

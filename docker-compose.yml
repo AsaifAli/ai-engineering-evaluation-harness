@@ -5,6 +5,8 @@ services:
       - "8000:8000"
     environment:
       AUDIT_DB: /app/data/audit.db
+      DATABASE_URL: ${DATABASE_URL:-}
+      DB_SCHEMA: ${DB_SCHEMA:-harness}
       LLM_PROVIDER: ${LLM_PROVIDER:-deterministic}
       GATEWAY_BASE_URL: ${GATEWAY_BASE_URL:-https://portfolio-llm-gateway.onrender.com}
       GATEWAY_SESSION_TOKEN: ${GATEWAY_SESSION_TOKEN:-}

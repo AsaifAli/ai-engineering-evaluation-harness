@@ -6,8 +6,10 @@ services:
     plan: free
     healthCheckPath: /health
     envVars:
-      - key: AUDIT_DB
-        value: /app/data/audit.db
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_SCHEMA
+        value: harness
       - key: LLM_PROVIDER
         value: deterministic
       - key: GATEWAY_BASE_URL

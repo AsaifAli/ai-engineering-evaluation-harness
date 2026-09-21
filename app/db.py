@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 import uuid
 from contextlib import contextmanager
@@ -8,32 +9,100 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterator, Optional
 
-from .config import DB_PATH
+from .config import DATABASE_URL, DB_PATH, DB_SCHEMA
+
+try:
+    import psycopg
+    from psycopg.rows import dict_row
+except ImportError:  # pragma: no cover - installed in production via requirements.txt
+    psycopg = None
+    dict_row = None
 
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _validate_schema_name(value: str) -> str:
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", value):
+        raise ValueError(f"Invalid database schema name: {value!r}")
+    return value
+
+
+_SCHEMA = _validate_schema_name(DB_SCHEMA)
 DB_FILE = Path(DB_PATH)
 DB_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 
-def connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    return conn
+def backend() -> str:
+    return "postgresql" if DATABASE_URL else "sqlite"
+
+
+class _PostgresConnection:
+    """Small compatibility wrapper so the existing repository code can stay backend-neutral."""
+
+    def __init__(self, connection):
+        self._connection = connection
+
+    @staticmethod
+    def _adapt_sql(sql: str) -> str:
+        # Existing application queries use SQLite-style '?'. PostgreSQL/psycopg uses '%s'.
+        return sql.replace("?", "%s")
+
+    def execute(self, sql: str, params=None):
+        return self._connection.execute(self._adapt_sql(sql), params or ())
+
+    def commit(self) -> None:
+        self._connection.commit()
+
+    def rollback(self) -> None:
+        self._connection.rollback()
+
+    def close(self) -> None:
+        self._connection.close()
+
+
+def connect():
+    if not DATABASE_URL:
+        conn = sqlite3.connect(DB_FILE)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        return conn
+
+    if psycopg is None:
+        raise RuntimeError("psycopg is required when DATABASE_URL is configured")
+
+    conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
+    conn.execute(f'CREATE SCHEMA IF NOT EXISTS "{_SCHEMA}"')
+    conn.execute(f'SET search_path TO "{_SCHEMA}"')
+    return _PostgresConnection(conn)
 
 
 @contextmanager
-def db() -> Iterator[sqlite3.Connection]:
+def db() -> Iterator[Any]:
     conn = connect()
     try:
         yield conn
         conn.commit()
-    finally:
+    except Exception:
+        try:
+            conn.rollback()
+        finally:
+            conn.close()
+        raise
+    else:
         conn.close()
+
+
+def _existing_ai_quality_columns(conn) -> set[str]:
+    if DATABASE_URL:
+        rows = conn.execute(
+            "SELECT column_name FROM information_schema.columns WHERE table_schema=? AND table_name=?",
+            (_SCHEMA, "ai_quality_runs"),
+        ).fetchall()
+        return {row["column_name"] for row in rows}
+    rows = conn.execute("PRAGMA table_info(ai_quality_runs)").fetchall()
+    return {row[1] for row in rows}
 
 
 def init_db() -> None:
@@ -107,7 +176,7 @@ def init_db() -> None:
             config_version TEXT NOT NULL DEFAULT 'v1',
             experiment_id TEXT
         )""")
-        columns = {row[1] for row in conn.execute("PRAGMA table_info(ai_quality_runs)").fetchall()}
+        columns = _existing_ai_quality_columns(conn)
         migrations = {
             "batch_id": "ALTER TABLE ai_quality_runs ADD COLUMN batch_id TEXT NOT NULL DEFAULT 'legacy-batch'",
             "dataset_version": "ALTER TABLE ai_quality_runs ADD COLUMN dataset_version TEXT NOT NULL DEFAULT 'v1'",
