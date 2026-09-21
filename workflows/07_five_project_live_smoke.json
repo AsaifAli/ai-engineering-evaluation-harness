@@ -1,0 +1,101 @@
+{
+  "name": "07 - Five-Project Live Smoke",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "fleet-smoke-schedule",
+      "name": "Fleet Smoke Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.HUB_BASE_URL}}/api/targets/fleet-smoke",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "fleet-smoke-call",
+      "name": "Run Five-Project Smoke",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [280, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const total = Number($json.total ?? 0);\nconst passed = Number($json.passed ?? 0);\nconst failed = total - passed;\nreturn [{ json: { ...$json, total, passed, failed, alert: failed > 0 } }];"
+      },
+      "id": "fleet-policy",
+      "name": "Fleet Policy",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [540, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "leftValue": "={{$json.alert}}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "fleet-if",
+      "name": "Fleet Attention?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [820, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.HUB_BASE_URL}}/webhooks/n8n",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"event\":\"five_project_fleet_smoke\",\"status\":$json.status,\"passed\":$json.passed,\"total\":$json.total,\"targets\":$json.targets}",
+        "options": { "timeout": 30000 }
+      },
+      "id": "fleet-audit",
+      "name": "Record Fleet Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 0]
+    }
+  ],
+  "connections": {
+    "Fleet Smoke Schedule": {
+      "main": [[{ "node": "Run Five-Project Smoke", "type": "main", "index": 0 }]]
+    },
+    "Run Five-Project Smoke": {
+      "main": [[{ "node": "Fleet Policy", "type": "main", "index": 0 }]]
+    },
+    "Fleet Policy": {
+      "main": [[{ "node": "Fleet Attention?", "type": "main", "index": 0 }]]
+    },
+    "Fleet Attention?": {
+      "main": [[{ "node": "Record Fleet Result", "type": "main", "index": 0 }], []]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "five-project-live-smoke-v1"
+}

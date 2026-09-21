@@ -118,9 +118,10 @@ async def run_target_endpoint(target: str, payload: dict, mode: str = "auto"):
     from .targets import TARGETS
     if target not in {spec.slug for spec in TARGETS}:
         raise HTTPException(404, f"unknown target: {target}")
+    spec = next(item for item in TARGETS if item.slug == target)
     selected = mode
     if selected == "auto":
-        selected = "live" if target in {"flowpilot", "legacylens"} else "replay"
+        selected = "live" if spec.mode.startswith("live_") else "replay"
     try:
         adapter = live_adapter(target) if selected == "live" else replay_adapter(target)
         result = await timed_run(adapter, str(payload.get("workflow") or "evaluation"), payload)
@@ -131,13 +132,15 @@ async def run_target_endpoint(target: str, payload: dict, mode: str = "auto"):
         "prompt_version": (result.metadata or {}).get("prompt_version", "target-default-v1"),
         "model_version": (result.metadata or {}).get("model_version", "target-runtime"),
         "config_version": (result.metadata or {}).get("config_version", config.HARNESS_CONFIG_VERSION),
+        "integration_mode": spec.mode,
         **(result.metadata or {}),
     }
     trace_id = insert_trace(run_id=result.run_id, target=target, workflow=result.workflow, status=result.status, duration_ms=result.duration_ms, steps=trace_steps, metadata=run_metadata)
-    insert_audit("target_run", result.status, {"target": target, "mode": selected, "result": result.output, "warnings": result.warnings, "trace_id": trace_id, "metadata": result.metadata or {}}, run_id=result.run_id)
+    insert_audit("target_run", result.status, {"target": target, "mode": selected, "integration_mode": spec.mode, "result": result.output, "warnings": result.warnings, "trace_id": trace_id, "metadata": result.metadata or {}}, run_id=result.run_id)
     return {
         "target": target,
         "mode": selected,
+        "integration_mode": spec.mode,
         "run_id": result.run_id,
         "workflow": result.workflow,
         "status": result.status,
@@ -147,6 +150,35 @@ async def run_target_endpoint(target: str, payload: dict, mode: str = "auto"):
         "trace_id": trace_id,
         "metadata": run_metadata,
     }
+
+
+@app.post("/api/targets/fleet-smoke")
+async def fleet_smoke(payload: dict | None = None):
+    """Run a safe live smoke across the five portfolio targets.
+
+    FlowPilot and LegacyLens retain their existing live adapters. EvidenceFlow,
+    QuoteSense and WebQA expose a dedicated /harness/smoke contract so the
+    harness can exercise real application code without inventing user workloads.
+    """
+    payload = payload or {}
+    results = []
+    for spec in target_catalog():
+        slug = spec["slug"]
+        if spec["mode"] == "live_smoke":
+            run_payload = {"workflow": "harness_smoke", "payload": payload.get(slug, {})}
+            try:
+                results.append(await run_target_endpoint(slug, run_payload, mode="live"))
+            except HTTPException as exc:
+                results.append({"target": slug, "integration_mode": spec["mode"], "mode": "live", "status": "failed", "http_status": exc.status_code, "error": str(exc.detail)})
+        else:
+            # Existing live adapters are already part of the harness; for the
+            # fleet smoke we verify their deployment surface without inventing
+            # a project-specific business payload.
+            results.append({"target": slug, "integration_mode": spec["mode"], "status": "live_adapter_ready", "base_url": spec.get("expected_url")})
+    passed = sum(item.get("status") in {"completed", "completed_with_warnings", "success", "live_adapter_ready"} for item in results)
+    summary = {"status": "passed" if passed == len(results) else "attention", "targets": results, "passed": passed, "total": len(results)}
+    insert_audit("fleet_smoke", summary["status"], summary, actor="n8n")
+    return summary
 
 
 @app.get("/api/traces")

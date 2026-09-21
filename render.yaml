@@ -24,8 +24,8 @@ services:
       - key: LEGACY_LENS_BASE_URL
         value: https://ai-code-modernization-api.onrender.com
       - key: EVIDENCEFLOW_BASE_URL
-        value: https://evidenceflow-langgraph.onrender.com
+        value: https://evidenceflow-harness.onrender.com
       - key: QUOTESENSE_BASE_URL
-        value: https://quotation-analyzer.onrender.com
+        value: https://quotesense-harness.onrender.com
       - key: WEBQA_BASE_URL
-        value: https://web-crawler-agent.onrender.com
+        value: https://webqa-harness.onrender.com

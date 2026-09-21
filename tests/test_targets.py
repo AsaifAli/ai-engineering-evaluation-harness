@@ -18,9 +18,9 @@ def test_targets_declare_modular_adapter_and_evaluation_pack():
     expected = {
         "flowpilot": ("flowpilot", "agent_workflow"),
         "legacylens": ("legacylens", "code_modernization"),
-        "evidenceflow": ("health_only", "rag"),
-        "quotesense": ("health_only", "document_intelligence"),
-        "webqa": ("health_only", "browser_qa"),
+        "evidenceflow": ("generic_http", "rag"),
+        "quotesense": ("generic_http", "document_intelligence"),
+        "webqa": ("generic_http", "browser_qa"),
     }
     # Validate the five built-in portfolio targets explicitly.
     # Extra/plugin targets are intentionally allowed through the modular registry.
@@ -32,3 +32,13 @@ def test_targets_declare_modular_adapter_and_evaluation_pack():
 
     # Target slugs must remain unique even when external/plugin targets are loaded.
     assert len(by_slug) == len(TARGETS)
+
+
+def test_live_smoke_contracts_for_three_ui_projects():
+    by_slug = {target.slug: target for target in TARGETS}
+    for slug in ("evidenceflow", "quotesense", "webqa"):
+        target = by_slug[slug]
+        assert target.mode == "live_smoke"
+        assert target.adapter == "generic_http"
+        assert target.run_path == "/harness/smoke"
+        assert target.health_path == "/health"
