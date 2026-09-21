@@ -1,0 +1,10 @@
+{
+  "title": "Add input validation to prediction API",
+  "body": "Adds validation for empty and malformed prediction requests.",
+  "changed_files": 4,
+  "additions": 120,
+  "deletions": 30,
+  "repository": "demo/repository",
+  "author": "test-developer",
+  "diff": "@@ -1,5 +1,8 @@\n+validate request payload\n+return 400 for malformed input"
+}

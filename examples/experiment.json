@@ -1,13 +1,6 @@
 {
   "experiment": "retrieval-eval-001",
-  "metrics": {
-    "recall@5": 0.81,
-    "ndcg@10": 0.74,
-    "latency_ms": 420
-  },
-  "baseline": {
-    "recall@5": 0.78,
-    "ndcg@10": 0.76,
-    "latency_ms": 390
-  }
+  "metrics": {"recall@5": 0.81, "ndcg@10": 0.74, "latency_ms": 420},
+  "baseline": {"recall@5": 0.78, "ndcg@10": 0.76, "latency_ms": 390},
+  "metadata": {"commit": "demo", "dataset": "eval-v1"}
 }

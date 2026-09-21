@@ -1,0 +1,16 @@
+services:
+  api:
+    environment:
+      CUSTOMER_RAG_BASE_URL: http://customer-rag:9001
+      EXTRA_TARGETS_JSON: >-
+        [{"slug":"customer-rag","name":"Customer RAG","role":"External RAG service",
+        "repository":"https://example.com/repo","expected_url":"http://customer-rag:9001",
+        "health_path":"/health","mode":"live_run","adapter":"generic_http",
+        "evaluation_pack":"rag","run_path":"/v1/run","configured_env":"CUSTOMER_RAG_BASE_URL",
+        "capabilities":["live_runs","rag_evaluation"]}]
+
+  customer-rag:
+    build: ./mock_services/customer_rag
+    ports:
+      - "9001:9001"
+    restart: unless-stopped

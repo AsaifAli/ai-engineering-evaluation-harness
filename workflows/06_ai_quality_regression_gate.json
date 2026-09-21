@@ -1,0 +1,74 @@
+{
+  "name": "06 - AI Quality Regression Gate",
+  "nodes": [
+    {
+      "parameters": {"rule": {"interval": [{"field": "hours", "hoursInterval": 6}]}},
+      "id": "quality-schedule",
+      "name": "Quality Evaluation Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/api/ai-quality/run?target=all",
+        "sendBody": false,
+        "options": {"timeout": 120000}
+      },
+      "id": "run-quality",
+      "name": "Run Five-Project Evaluation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [250, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://api:8000/api/ai-quality",
+        "options": {"timeout": 30000}
+      },
+      "id": "read-quality",
+      "name": "Read Quality Metrics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const score = Number($json.platform_score ?? 0);\nconst failed = Number($json.target_count ?? 0) - Number($json.target_gate_passes ?? 0);\nreturn [{ json: { score, failedTargets: failed, alert: score < 0.90 || failed > 0 } }];"
+      },
+      "id": "quality-policy",
+      "name": "Quality Policy",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 0]
+    },
+    {
+      "parameters": {"conditions": {"options": {"caseSensitive": true}, "conditions": [{"leftValue": "={{ $json.alert }}", "rightValue": true, "operator": {"type": "boolean", "operation": "true"}}], "combinator": "and"}},
+      "id": "quality-if",
+      "name": "Quality Regression?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1000, 0]
+    },
+    {
+      "parameters": {"method": "POST", "url": "http://api:8000/webhooks/n8n", "sendBody": true, "specifyBody": "json", "jsonBody": "={\"event\":\"ai_quality_regression\",\"score\":$json.score,\"failed_targets\":$json.failedTargets}", "options": {"timeout": 30000}},
+      "id": "quality-alert",
+      "name": "Record Regression Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, -80]
+    }
+  ],
+  "connections": {
+    "Quality Evaluation Schedule": {"main": [[{"node": "Run Five-Project Evaluation", "type": "main", "index": 0}]]},
+    "Run Five-Project Evaluation": {"main": [[{"node": "Read Quality Metrics", "type": "main", "index": 0}]]},
+    "Read Quality Metrics": {"main": [[{"node": "Quality Policy", "type": "main", "index": 0}]]},
+    "Quality Policy": {"main": [[{"node": "Quality Regression?", "type": "main", "index": 0}]]},
+    "Quality Regression?": {"main": [[{"node": "Record Regression Alert", "type": "main", "index": 0}], []]}
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "versionId": "quality-regression-gate-v1"
+}

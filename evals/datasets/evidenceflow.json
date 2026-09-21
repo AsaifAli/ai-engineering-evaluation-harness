@@ -1,0 +1,36 @@
+[
+  {
+    "id": "refund_policy",
+    "target": "evidenceflow",
+    "mode": "replay",
+    "expected": {
+      "k": 5,
+      "relevant_documents": ["policy_v3.pdf#section_4", "enterprise_terms.pdf#section_2"],
+      "required_citations": ["policy_v3.pdf#section_4"],
+      "relevant_citations": ["policy_v3.pdf#section_4", "enterprise_terms.pdf#section_2"]
+    },
+    "actual": {
+      "retrieved_documents": ["policy_v3.pdf#section_4", "billing_faq.pdf#section_7", "enterprise_terms.pdf#section_2", "pricing.pdf#section_1", "privacy.pdf#section_3"],
+      "citations": ["policy_v3.pdf#section_4", "enterprise_terms.pdf#section_2"],
+      "answer_relevance": 0.96,
+      "groundedness": 0.95
+    }
+  },
+  {
+    "id": "retention_period",
+    "target": "evidenceflow",
+    "mode": "replay",
+    "expected": {
+      "k": 5,
+      "relevant_documents": ["data_policy.pdf#section_6", "security_appendix.pdf#section_3"],
+      "required_citations": ["data_policy.pdf#section_6"],
+      "relevant_citations": ["data_policy.pdf#section_6", "security_appendix.pdf#section_3"]
+    },
+    "actual": {
+      "retrieved_documents": ["data_policy.pdf#section_6", "security_appendix.pdf#section_3", "privacy.pdf#section_2", "sla.pdf#section_8", "faq.pdf#section_5"],
+      "citations": ["data_policy.pdf#section_6"],
+      "answer_relevance": 0.93,
+      "groundedness": 0.91
+    }
+  }
+]

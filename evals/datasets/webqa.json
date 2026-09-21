@@ -1,0 +1,16 @@
+[
+  {
+    "id": "checkout_regression",
+    "target": "webqa",
+    "mode": "replay",
+    "expected": {"tests": ["checkout_guest", "checkout_coupon", "checkout_payment"], "defects": ["coupon_not_applied"], "regressions": ["payment_submit_timeout"]},
+    "actual": {"tests": ["checkout_guest", "checkout_coupon", "checkout_payment"], "detected_defects": ["coupon_not_applied"], "regressions": ["payment_submit_timeout"], "locator_validity": 0.98, "execution_success": true}
+  },
+  {
+    "id": "login_regression",
+    "target": "webqa",
+    "mode": "replay",
+    "expected": {"tests": ["login_valid", "login_invalid", "login_lockout"], "defects": ["lockout_counter_reset"], "regressions": []},
+    "actual": {"tests": ["login_valid", "login_invalid", "login_lockout", "login_redirect"], "detected_defects": ["lockout_counter_reset"], "regressions": [], "locator_validity": 0.97, "execution_success": true}
+  }
+]

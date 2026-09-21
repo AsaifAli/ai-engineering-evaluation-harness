@@ -1,0 +1,26 @@
+[
+  {
+    "id": "content_basic",
+    "workflow": "content",
+    "payload": {"topics": ["AI agents"], "channels": ["x", "linkedin"], "tone": "executive"},
+    "assertions": {"count": 2}
+  },
+  {
+    "id": "competitor_basic",
+    "workflow": "competitor",
+    "payload": {"competitors": ["Example Protocol"]},
+    "assertions": {"has_actions": true}
+  },
+  {
+    "id": "outreach_guardrail",
+    "workflow": "outreach",
+    "payload": {"candidates": [{"name": "Partner A", "context": "AI infrastructure"}]},
+    "assertions": {"approval_required": true}
+  },
+  {
+    "id": "kpi_risk_detection",
+    "workflow": "kpi",
+    "payload": {"updates": [{"entity": "Team A", "metric": "delivery", "value": "behind", "blocker": "Dependency blocked"}]},
+    "assertions": {"risk_count": 1}
+  }
+]

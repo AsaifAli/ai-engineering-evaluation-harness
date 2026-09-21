@@ -1,0 +1,11 @@
+{
+  "name": "02 - AI PR Review + Approval",
+  "nodes": [
+    {"parameters":{"httpMethod":"POST","path":"ai-engineering/pr","responseMode":"responseNode"},"id":"pr-webhook","name":"GitHub PR Webhook","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[0,0],"webhookId":"ai-engineering-pr"},
+    {"parameters":{"method":"POST","url":"http://api:8000/ai/pr-review","sendBody":true,"specifyBody":"json","jsonBody":"={\"title\":$json.body.pull_request.title,\"body\":$json.body.pull_request.body || \"\",\"changed_files\":$json.body.pull_request.changed_files || 0,\"additions\":$json.body.pull_request.additions || 0,\"deletions\":$json.body.pull_request.deletions || 0,\"repository\":$json.body.repository.full_name,\"author\":$json.body.pull_request.user.login,\"diff\":$json.body.pull_request.diff || null}"},"id":"pr-review","name":"AI PR Review","type":"n8n-nodes-base.httpRequest","typeVersion":4,"position":[260,0]},
+    {"parameters":{"method":"POST","url":"http://api:8000/approvals","sendBody":true,"specifyBody":"json","jsonBody":"={\"workflow\":\"pr_review\",\"summary\":$json.review_summary,\"payload\":$json}"},"id":"approval","name":"Create Approval","type":"n8n-nodes-base.httpRequest","typeVersion":4,"position":[520,0]},
+    {"parameters":{"respondWith":"json","responseBody":"={\"status\":\"pending_approval\",\"approval_id\":$json.approval_id}"},"id":"response","name":"Webhook Response","type":"n8n-nodes-base.respondToWebhook","typeVersion":1.4,"position":[780,0]}
+  ],
+  "connections":{"GitHub PR Webhook":{"main":[[{"node":"AI PR Review","type":"main","index":0}]]},"AI PR Review":{"main":[[{"node":"Create Approval","type":"main","index":0}]]},"Create Approval":{"main":[[{"node":"Webhook Response","type":"main","index":0}]]}},
+  "active":false,"settings":{},"versionId":"3"
+}

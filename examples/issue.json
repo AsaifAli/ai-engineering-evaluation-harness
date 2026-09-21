@@ -1,0 +1,6 @@
+{
+  "title": "API returns 500 on invalid input",
+  "body": "The /predict endpoint crashes when an empty payload is submitted.",
+  "repository": "demo/repository",
+  "author": "test-user"
+}

@@ -1,0 +1,11 @@
+{
+  "name": "03 - Scheduled Experiment Digest",
+  "nodes": [
+    {"parameters":{"rule":{"interval":[{"field":"days","triggerAtHour":9}]}},"id":"schedule","name":"Daily Evaluation Schedule","type":"n8n-nodes-base.scheduleTrigger","typeVersion":1.2,"position":[0,0]},
+    {"parameters":{"assignments":{"assignments":[{"name":"experiment","value":"retrieval-eval-001","type":"string"},{"name":"metrics","value":"{\"recall@5\":0.81,\"ndcg@10\":0.74,\"latency_ms\":420}","type":"string"},{"name":"baseline","value":"{\"recall@5\":0.78,\"ndcg@10\":0.76,\"latency_ms\":390}","type":"string"}]}},"id":"data","name":"Evaluation Payload","type":"n8n-nodes-base.set","typeVersion":3.4,"position":[240,0]},
+    {"parameters":{"method":"POST","url":"http://api:8000/ai/experiment-summary","sendBody":true,"specifyBody":"json","jsonBody":"={\"experiment\":$json.experiment,\"metrics\":JSON.parse($json.metrics),\"baseline\":JSON.parse($json.baseline),\"metadata\":{\"source\":\"n8n-schedule\"}}"},"id":"summary","name":"Generate Digest","type":"n8n-nodes-base.httpRequest","typeVersion":4,"position":[520,0]},
+    {"parameters":{"method":"POST","url":"http://api:8000/approvals","sendBody":true,"specifyBody":"json","jsonBody":"={\"workflow\":\"experiment_summary\",\"summary\":$json.summary,\"payload\":$json}"},"id":"approval","name":"Create Approval","type":"n8n-nodes-base.httpRequest","typeVersion":4,"position":[780,0]}
+  ],
+  "connections":{"Daily Evaluation Schedule":{"main":[[{"node":"Evaluation Payload","type":"main","index":0}]]},"Evaluation Payload":{"main":[[{"node":"Generate Digest","type":"main","index":0}]]},"Generate Digest":{"main":[[{"node":"Create Approval","type":"main","index":0}]]}},
+  "active":false,"settings":{},"versionId":"3"
+}

@@ -1,0 +1,16 @@
+[
+  {
+    "id": "python2_to_python3",
+    "target": "legacylens",
+    "mode": "replay",
+    "expected": {"transformation_success": true, "expected_changed_files": ["billing.py", "invoice.py"]},
+    "actual": {"transformation_success": true, "syntax_valid": true, "unit_tests_passed": 48, "unit_tests_total": 50, "semantic_verification_passed": true, "release_gate_passed": true, "changed_files": ["billing.py", "invoice.py"]}
+  },
+  {
+    "id": "java_framework_migration",
+    "target": "legacylens",
+    "mode": "replay",
+    "expected": {"transformation_success": true, "expected_changed_files": ["OrderService.java", "PaymentClient.java"]},
+    "actual": {"transformation_success": true, "syntax_valid": true, "unit_tests_passed": 31, "unit_tests_total": 31, "semantic_verification_passed": true, "release_gate_passed": true, "changed_files": ["OrderService.java", "PaymentClient.java"]}
+  }
+]

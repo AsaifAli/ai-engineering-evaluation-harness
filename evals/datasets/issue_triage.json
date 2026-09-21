@@ -1,0 +1,5 @@
+[
+  {"id":"bug-high","input":{"title":"API returns 500 on invalid input","body":"The /predict endpoint crashes when an empty payload is submitted.","repository":"demo/repository"},"expected":{"category":"bug","priority":"high","requires_human_approval":true}},
+  {"id":"security-critical","input":{"title":"Credential leaked in production logs","body":"A token appeared in production logs and may be exposed.","repository":"demo/repository"},"expected":{"category":"security","priority":"critical","requires_human_approval":true}},
+  {"id":"ml-medium","input":{"title":"Embedding model regression","body":"Retrieval quality dropped after changing the embedding model.","repository":"demo/repository"},"expected":{"category":"ai-ml","priority":"medium","requires_human_approval":true}}
+]

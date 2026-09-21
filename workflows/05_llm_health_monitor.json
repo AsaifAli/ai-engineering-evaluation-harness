@@ -1,0 +1,11 @@
+{
+  "name": "05 - LLM Health Monitor",
+  "nodes": [
+    {"parameters":{"rule":{"interval":[{"field":"hours","hoursInterval":1}]}},"id":"schedule","name":"Hourly Health Check","type":"n8n-nodes-base.scheduleTrigger","typeVersion":1.2,"position":[0,0]},
+    {"parameters":{"method":"GET","url":"http://api:8000/api/metrics"},"id":"metrics","name":"Read LLM Metrics","type":"n8n-nodes-base.httpRequest","typeVersion":4,"position":[240,0]},
+    {"parameters":{"jsCode":"const fallback = Number($json.fallback_rate_pct || 0); const evalRate = Number($json.evaluation_pass_rate_pct || 100); const latency = Number($json.avg_latency_ms || 0); return [{json:{alert: fallback > 20 || (evalRate > 0 && evalRate < 85) || latency > 5000, fallback_rate_pct:fallback, evaluation_pass_rate_pct:evalRate, avg_latency_ms:latency}}];"},"id":"policy","name":"Health Policy","type":"n8n-nodes-base.code","typeVersion":2,"position":[500,0]},
+    {"parameters":{"conditions":{"boolean":[{"value1":"={{$json.alert}}","operation":"isTrue"}]}},"id":"if","name":"Alert?","type":"n8n-nodes-base.if","typeVersion":2,"position":[760,0]}
+  ],
+  "connections":{"Hourly Health Check":{"main":[[{"node":"Read LLM Metrics","type":"main","index":0}]]},"Read LLM Metrics":{"main":[[{"node":"Health Policy","type":"main","index":0}]]},"Health Policy":{"main":[[{"node":"Alert?","type":"main","index":0}]]}},
+  "active":false,"settings":{},"versionId":"3"
+}

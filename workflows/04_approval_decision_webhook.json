@@ -1,0 +1,10 @@
+{
+  "name": "04 - Approval Decision Webhook",
+  "nodes": [
+    {"parameters":{"httpMethod":"POST","path":"ai-engineering/approval","responseMode":"responseNode"},"id":"approval-webhook","name":"Approval Decision Webhook","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[0,0],"webhookId":"ai-engineering-approval"},
+    {"parameters":{"method":"POST","url":"=http://api:8000/approvals/{{$json.body.approval_id}}/decision","sendBody":true,"specifyBody":"json","jsonBody":"={\"status\":$json.body.status,\"decided_by\":$json.body.decided_by || \"human\",\"decision_note\":$json.body.decision_note || \"\"}"},"id":"decision","name":"Persist Decision","type":"n8n-nodes-base.httpRequest","typeVersion":4,"position":[300,0]},
+    {"parameters":{"respondWith":"json","responseBody":"=$json"},"id":"response","name":"Webhook Response","type":"n8n-nodes-base.respondToWebhook","typeVersion":1.4,"position":[560,0]}
+  ],
+  "connections":{"Approval Decision Webhook":{"main":[[{"node":"Persist Decision","type":"main","index":0}]]},"Persist Decision":{"main":[[{"node":"Webhook Response","type":"main","index":0}]]}},
+  "active":false,"settings":{},"versionId":"3"
+}

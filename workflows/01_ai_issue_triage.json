@@ -1,0 +1,11 @@
+{
+  "name": "01 - AI Issue Triage + Approval",
+  "nodes": [
+    {"parameters":{"httpMethod":"POST","path":"ai-engineering/issue","responseMode":"responseNode"},"id":"issue-webhook","name":"GitHub Issue Webhook","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[0,0],"webhookId":"ai-engineering-issue"},
+    {"parameters":{"method":"POST","url":"http://api:8000/ai/triage","sendBody":true,"specifyBody":"json","jsonBody":"={\"title\":$json.body.issue.title,\"body\":$json.body.issue.body || \"\",\"labels\":$json.body.issue.labels || [],\"repository\":$json.body.repository.full_name,\"author\":$json.body.issue.user.login}"},"id":"triage","name":"AI Triage","type":"n8n-nodes-base.httpRequest","typeVersion":4,"position":[260,0]},
+    {"parameters":{"method":"POST","url":"http://api:8000/approvals","sendBody":true,"specifyBody":"json","jsonBody":"={\"workflow\":\"issue_triage\",\"summary\":$json.summary,\"payload\":$json}"},"id":"approval","name":"Create Approval","type":"n8n-nodes-base.httpRequest","typeVersion":4,"position":[520,0]},
+    {"parameters":{"respondWith":"json","responseBody":"={\"status\":\"pending_approval\",\"approval_id\":$json.approval_id}"},"id":"response","name":"Webhook Response","type":"n8n-nodes-base.respondToWebhook","typeVersion":1.4,"position":[780,0]}
+  ],
+  "connections":{"GitHub Issue Webhook":{"main":[[{"node":"AI Triage","type":"main","index":0}]]},"AI Triage":{"main":[[{"node":"Create Approval","type":"main","index":0}]]},"Create Approval":{"main":[[{"node":"Webhook Response","type":"main","index":0}]]}},
+  "active":false,"settings":{},"versionId":"3"
+}

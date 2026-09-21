@@ -1,0 +1,4 @@
+[
+  {"id":"retrieval-regression","input":{"experiment":"retrieval-eval-001","metrics":{"recall@5":0.81,"ndcg@10":0.74,"latency_ms":420},"baseline":{"recall@5":0.78,"ndcg@10":0.76,"latency_ms":390}},"expected":{"regressions":["ndcg@10","latency_ms"],"improvements":["recall@5"],"requires_human_approval":true}},
+  {"id":"clean-improvement","input":{"experiment":"ranking-eval-002","metrics":{"recall@5":0.84,"latency_ms":370},"baseline":{"recall@5":0.80,"latency_ms":410}},"expected":{"regressions":[],"improvements":["recall@5","latency_ms"],"requires_human_approval":true}}
+]

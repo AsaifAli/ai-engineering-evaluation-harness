@@ -1,0 +1,16 @@
+[
+  {
+    "id": "issue_to_approval",
+    "target": "flowpilot",
+    "mode": "replay",
+    "expected": {"success_statuses": ["completed", "completed_with_warnings"], "required_steps": ["ingest", "classify", "approval", "audit"]},
+    "actual": {"status": "completed", "completed_steps": ["ingest", "classify", "approval", "audit"], "tool_call_validity": 0.99, "policy_pass_rate": 1.0, "approval_compliant": true, "execution_reliability": 0.97, "fallback_rate": 0.0}
+  },
+  {
+    "id": "scheduled_digest",
+    "target": "flowpilot",
+    "mode": "replay",
+    "expected": {"success_statuses": ["completed", "completed_with_warnings"], "required_steps": ["load_metrics", "compare", "summarize", "notify"]},
+    "actual": {"status": "completed", "completed_steps": ["load_metrics", "compare", "summarize", "notify"], "tool_call_validity": 0.98, "policy_pass_rate": 1.0, "approval_compliant": true, "execution_reliability": 0.96, "fallback_rate": 0.0}
+  }
+]

@@ -1,0 +1,10 @@
+{
+  "name": "replay_v1",
+  "targets": {
+    "evidenceflow": {"score": 0.911652, "cases": 2},
+    "legacylens": {"score": 0.995, "cases": 2},
+    "quotesense": {"score": 0.988, "cases": 2},
+    "webqa": {"score": 0.979286, "cases": 2},
+    "flowpilot": {"score": 0.99425, "cases": 2}
+  }
+}

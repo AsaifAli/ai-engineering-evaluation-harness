@@ -1,0 +1,5 @@
+[
+  {"id":"small-low","input":{"title":"Add unit test for parser","body":"Adds a focused unit test.","changed_files":1,"additions":30,"deletions":5},"expected":{"risk":"low","requires_human_approval":true}},
+  {"id":"security-high","input":{"title":"Update authentication middleware","body":"Changes permission checks and token handling.","changed_files":8,"additions":220,"deletions":80},"expected":{"risk":"high","requires_human_approval":true}},
+  {"id":"infra-medium","input":{"title":"Update deployment migration","body":"Adds a database migration and deploy configuration.","changed_files":10,"additions":300,"deletions":100},"expected":{"risk":"medium","requires_human_approval":true}}
+]

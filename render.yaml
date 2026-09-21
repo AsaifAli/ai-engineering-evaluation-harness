@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: ai-engineering-automation-api
+    name: ai-engineering-automation-llmops
     runtime: docker
     dockerfilePath: ./Dockerfile
     plan: free
@@ -8,3 +8,22 @@ services:
     envVars:
       - key: AUDIT_DB
         value: /app/data/audit.db
+      - key: LLM_PROVIDER
+        value: deterministic
+      - key: GATEWAY_BASE_URL
+        value: https://portfolio-llm-gateway.onrender.com
+      - key: GATEWAY_SESSION_TOKEN
+        sync: false
+      - key: GATEWAY_MODEL
+        sync: false
+
+      - key: COMMAND_CENTER_BASE_URL
+        value: https://ai-automation-api.onrender.com
+      - key: LEGACY_LENS_BASE_URL
+        value: https://ai-code-modernization-api.onrender.com
+      - key: EVIDENCEFLOW_BASE_URL
+        value: https://evidenceflow-langgraph.onrender.com
+      - key: QUOTESENSE_BASE_URL
+        value: https://quotation-analyzer.onrender.com
+      - key: WEBQA_BASE_URL
+        value: https://web-crawler-agent.onrender.com

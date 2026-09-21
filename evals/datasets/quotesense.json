@@ -1,0 +1,16 @@
+[
+  {
+    "id": "quote_001",
+    "target": "quotesense",
+    "mode": "replay",
+    "expected": {"fields": {"vendor": "Acme Systems", "currency": "USD", "subtotal": 12500.0, "lead_time_days": 30}, "critical_fields": ["vendor", "currency", "subtotal"], "risk_label": "low"},
+    "actual": {"fields": {"vendor": "Acme Systems", "currency": "USD", "subtotal": 12500.0, "lead_time_days": 30}, "schema_valid": true, "numeric_accuracy": 1.0, "risk_label": "low", "recommendation_consistency": 0.96}
+  },
+  {
+    "id": "quote_002",
+    "target": "quotesense",
+    "mode": "replay",
+    "expected": {"fields": {"vendor": "Northstar Ltd", "currency": "EUR", "subtotal": 8900.0, "lead_time_days": 75}, "critical_fields": ["vendor", "currency", "subtotal"], "risk_label": "high"},
+    "actual": {"fields": {"vendor": "Northstar Ltd", "currency": "EUR", "subtotal": 8900.0, "lead_time_days": 75}, "schema_valid": true, "numeric_accuracy": 1.0, "risk_label": "high", "recommendation_consistency": 0.92}
+  }
+]

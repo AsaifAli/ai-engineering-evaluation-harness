@@ -1,6 +1,8 @@
 # Resume-ready project description
 
-## AI Engineering Automation Hub | n8n, Python, FastAPI, LLMs, GitHub
-- Built an event-driven AI automation platform using n8n and FastAPI to automate GitHub issue triage, PR review assistance, experiment reporting, and engineering notifications.
-- Integrated LLM-powered classification and summarization services with structured outputs, approval gates, webhook triggers, scheduled workflows, and API integrations.
-- Containerized the automation stack with Docker Compose and designed auditable workflows that separate AI decision support from human-approved external actions.
+Use after the implementation has been tested and the portfolio links are live.
+
+**AI Engineering Evaluation, Agent Harness & LLMOps Platform — Python, FastAPI, n8n, Docker**
+- Built a reusable AI engineering harness that wraps five AI systems with common adapters for observability, evaluation, guardrails, reliability controls, human approval and auditability.
+- Implemented project-specific AI evaluation suites including Recall@K, Precision@K, MRR, MAP@K, nDCG, citation correctness, code migration gates, document extraction accuracy, risk F1 and browser QA detection metrics.
+- Operationalized AI quality with golden sets, batch-based regression comparison, CI quality gates, n8n scheduling/webhooks, prompt/version telemetry, fallback/retry/circuit-breaker controls and an operational dashboard.
