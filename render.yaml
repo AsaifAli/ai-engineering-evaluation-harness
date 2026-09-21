@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: ai-engineering-automation-llmops
+    name: ai-engineering-evaluation-harness
     runtime: docker
     dockerfilePath: ./Dockerfile
     plan: free
