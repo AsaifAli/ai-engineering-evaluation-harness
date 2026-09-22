@@ -7,6 +7,7 @@ from typing import Any
 
 from app.config import HARNESS_CONFIG_VERSION
 from app.db import insert_audit, insert_ai_quality
+from app.mlops import complete_experiment, create_experiment, sync_builtin_datasets
 from app.targets import TARGETS as TARGET_SPECS
 from evals.project_evals import evaluate_case
 
@@ -26,57 +27,83 @@ def load_cases(target: str) -> list[dict[str, Any]]:
 
 def run_target(target: str, *, mode: str = "replay", dataset_version: str = "v1", prompt_version: str = "not-applicable", model_version: str = "replay-fixture-v1", config_version: str = HARNESS_CONFIG_VERSION, experiment_id: str | None = None) -> dict[str, Any]:
     import uuid
+
+    sync_builtin_datasets(dataset_version)
     cases = load_cases(target)
     batch_id = str(uuid.uuid4())
+    tracked_experiment_id = experiment_id or create_experiment(
+        name=f"quality:{target}:{batch_id[:8]}",
+        target=target,
+        model_name=model_version,
+        model_version=model_version,
+        dataset_name=target,
+        dataset_version=dataset_version,
+        prompt_version=prompt_version,
+        config_version=config_version,
+        parameters={"mode": mode, "case_count": len(cases)},
+    )
     results = []
-    for case in cases:
-        if case.get("mode", mode) != mode and mode != "all":
-            continue
-        result = evaluate_case(
-            target,
-            str(case["id"]),
-            case.get("expected", {}),
-            case.get("actual", {}),
-            mode=case.get("mode", mode),
+    try:
+        for case in cases:
+            if case.get("mode", mode) != mode and mode != "all":
+                continue
+            result = evaluate_case(
+                target,
+                str(case["id"]),
+                case.get("expected", {}),
+                case.get("actual", {}),
+                mode=case.get("mode", mode),
+            )
+            quality_id = insert_ai_quality(
+                batch_id=batch_id,
+                target=result.target,
+                case_id=result.case_id,
+                mode=result.mode,
+                score=result.score,
+                passed=result.passed,
+                metrics=result.metrics,
+                gate_failures=result.gate_failures,
+                notes=result.notes,
+                dataset_version=dataset_version,
+                prompt_version=prompt_version,
+                model_version=model_version,
+                config_version=config_version,
+                experiment_id=tracked_experiment_id,
+            )
+            results.append({
+                "quality_id": quality_id,
+                "target": result.target,
+                "case_id": result.case_id,
+                "mode": result.mode,
+                "score": result.score,
+                "passed": result.passed,
+                "metrics": result.metrics,
+                "gate_failures": result.gate_failures,
+                "notes": result.notes,
+            })
+        summary = {
+            "target": target,
+            "mode": mode,
+            "batch_id": batch_id,
+            "experiment_id": tracked_experiment_id,
+            "dataset_version": dataset_version,
+            "model_version": model_version,
+            "cases": len(results),
+            "passed": sum(1 for result in results if result["passed"]),
+            "avg_score": round(sum(result["score"] for result in results) / len(results), 6) if results else 0.0,
+            "results": results,
+        }
+        complete_experiment(
+            tracked_experiment_id,
+            metrics={"avg_score": summary["avg_score"], "passed": summary["passed"], "cases": summary["cases"]},
+            status="completed",
+            notes="Evaluation batch persisted with dataset/model/config lineage.",
         )
-        quality_id = insert_ai_quality(
-            batch_id=batch_id,
-            target=result.target,
-            case_id=result.case_id,
-            mode=result.mode,
-            score=result.score,
-            passed=result.passed,
-            metrics=result.metrics,
-            gate_failures=result.gate_failures,
-            notes=result.notes,
-            dataset_version=dataset_version,
-            prompt_version=prompt_version,
-            model_version=model_version,
-            config_version=config_version,
-            experiment_id=experiment_id,
-        )
-        results.append({
-            "quality_id": quality_id,
-            "target": result.target,
-            "case_id": result.case_id,
-            "mode": result.mode,
-            "score": result.score,
-            "passed": result.passed,
-            "metrics": result.metrics,
-            "gate_failures": result.gate_failures,
-            "notes": result.notes,
-        })
-    summary = {
-        "target": target,
-        "mode": mode,
-        "batch_id": batch_id,
-        "cases": len(results),
-        "passed": sum(1 for result in results if result["passed"]),
-        "avg_score": round(sum(result["score"] for result in results) / len(results), 6) if results else 0.0,
-        "results": results,
-    }
-    insert_audit("ai_quality_evaluation", "passed" if summary["passed"] == summary["cases"] else "attention", summary, actor="evaluation-runner")
-    return summary
+        insert_audit("ai_quality_evaluation", "passed" if summary["passed"] == summary["cases"] else "attention", summary, actor="evaluation-runner")
+        return summary
+    except Exception:
+        complete_experiment(tracked_experiment_id, metrics={}, status="failed", notes="Evaluation runner raised an exception.")
+        raise
 
 
 def run_all(mode: str = "replay", **kwargs: Any) -> dict[str, Any]:

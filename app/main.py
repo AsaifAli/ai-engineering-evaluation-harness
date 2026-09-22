@@ -5,12 +5,14 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
 from . import gateway
 from . import config
-from .db import create_approval, db, decide_approval, init_db, insert_audit, insert_config, insert_experiment_comparison, insert_trace, metrics, query_configs, query_experiments, query_judges, query_rows, query_traces, quality_metrics
+from .auth import require_hub_api_key
+from .mlops import complete_experiment, create_experiment, ensure_runtime_model, overview as mlops_overview, promote_model, sync_builtin_datasets
+from .db import create_approval, db, decide_approval, init_db, insert_audit, insert_config, insert_experiment_comparison, insert_trace, metrics, query_configs, query_experiments, query_judges, query_rows, query_traces, quality_metrics, query_models, query_datasets, query_experiments_runs, insert_model
 from .models import ApprovalRequest, DecisionRequest, ExperimentRequest, IssueRequest, PRRequest
 from .services import run_experiment_summary, run_issue_triage, run_pr_review
 from .targets import check_all_target_health, target_catalog, target_registry
@@ -21,6 +23,8 @@ from evals.judge import judge_response
 from .harness import AdapterError, timed_run
 
 init_db()
+sync_builtin_datasets("v1")
+ensure_runtime_model()
 
 for _component, _version, _config in (
     ("harness", config.HARNESS_CONFIG_VERSION, {"architecture": "modular", "public_mode": "replay_safe"}),
@@ -113,7 +117,7 @@ def ai_quality_run(target: str = "all"):
     return run_target(target, mode="replay")
 
 
-@app.post("/api/targets/{target}/run")
+@app.post("/api/targets/{target}/run", dependencies=[Depends(require_hub_api_key)])
 async def run_target_endpoint(target: str, payload: dict, mode: str = "auto"):
     from .targets import TARGETS
     if target not in {spec.slug for spec in TARGETS}:
@@ -152,7 +156,7 @@ async def run_target_endpoint(target: str, payload: dict, mode: str = "auto"):
     }
 
 
-@app.post("/api/targets/fleet-smoke")
+@app.post("/api/targets/fleet-smoke", dependencies=[Depends(require_hub_api_key)])
 async def fleet_smoke(payload: dict | None = None):
     """Run a safe live smoke across the five portfolio targets.
 
@@ -191,7 +195,7 @@ def config_registry(limit: int = 100):
     return query_configs(limit)
 
 
-@app.post("/api/config-registry")
+@app.post("/api/config-registry", dependencies=[Depends(require_hub_api_key)])
 def config_registry_create(payload: dict):
     component = str(payload.get("component") or "").strip()
     version = str(payload.get("version") or "").strip()
@@ -206,7 +210,7 @@ def experiments(limit: int = 100):
     return query_experiments(limit)
 
 
-@app.post("/api/experiments/compare")
+@app.post("/api/experiments/compare", dependencies=[Depends(require_hub_api_key)])
 def experiments_compare(payload: dict):
     target = str(payload.get("target") or "").strip().lower()
     baseline_batch_id = str(payload.get("baseline_batch_id") or "").strip()
@@ -244,6 +248,69 @@ def experiments_latest():
         else:
             targets[slug] = {"target": slug, "status": "first_run", "score": item.get("score")}
     return {"targets": targets}
+
+
+@app.get("/api/mlops/overview")
+def mlops_summary():
+    return mlops_overview()
+
+
+@app.get("/api/mlops/models")
+def mlops_models(limit: int = 100):
+    return query_models(limit)
+
+
+@app.post("/api/mlops/models", dependencies=[Depends(require_hub_api_key)])
+def mlops_model_create(payload: dict):
+    name = str(payload.get("name") or "").strip()
+    provider = str(payload.get("provider") or "").strip()
+    version = str(payload.get("version") or "").strip()
+    if not name or not provider or not version:
+        raise HTTPException(400, "name, provider and version are required")
+    status = str(payload.get("status") or "candidate")
+    if status not in {"candidate", "observed"}:
+        raise HTTPException(400, "new models may only be registered as candidate or observed; use the promotion endpoint for production")
+    item = insert_model(
+        name=name,
+        provider=provider,
+        version=version,
+        status=status,
+        eval_score=float(payload["eval_score"]) if payload.get("eval_score") is not None else None,
+        eval_dataset_version=str(payload["eval_dataset_version"]) if payload.get("eval_dataset_version") else None,
+        config_version=str(payload.get("config_version") or config.HARNESS_CONFIG_VERSION),
+        metadata=payload.get("metadata") or {},
+    )
+    insert_audit("model_registered", "completed", item, actor="mlops")
+    return item
+
+
+@app.post("/api/mlops/models/{model_id}/promote", dependencies=[Depends(require_hub_api_key)])
+def mlops_model_promote(model_id: str, payload: dict | None = None):
+    try:
+        item = promote_model(model_id, min_score=(payload or {}).get("min_score"))
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    insert_audit("model_promoted", "completed", item, actor="mlops")
+    return item
+
+
+@app.get("/api/mlops/datasets")
+def mlops_datasets(limit: int = 200):
+    return query_datasets(limit)
+
+
+@app.post("/api/mlops/datasets/sync", dependencies=[Depends(require_hub_api_key)])
+def mlops_datasets_sync(version: str = "v1"):
+    items = sync_builtin_datasets(version)
+    insert_audit("dataset_registry_sync", "completed", {"version": version, "count": len(items)}, actor="mlops")
+    return {"version": version, "count": len(items), "datasets": items}
+
+
+@app.get("/api/mlops/experiments")
+def mlops_experiments(limit: int = 100):
+    return query_experiments_runs(limit)
 
 
 @app.get("/api/judges")
@@ -323,7 +390,7 @@ def approval_decision(approval_id: str, req: DecisionRequest):
     return result
 
 
-@app.post("/webhooks/n8n")
+@app.post("/webhooks/n8n", dependencies=[Depends(require_hub_api_key)])
 async def n8n_webhook(request: Request):
     payload = await request.json()
     event_id = insert_audit("n8n_webhook", "received", payload, actor="n8n")

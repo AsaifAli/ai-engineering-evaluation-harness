@@ -18,6 +18,10 @@ services:
         sync: false
       - key: GATEWAY_MODEL
         sync: false
+      - key: HUB_API_KEY
+        sync: false
+      - key: MODEL_PROMOTION_MIN_SCORE
+        value: "0.90"
 
       - key: COMMAND_CENTER_BASE_URL
         value: https://ai-automation-api.onrender.com

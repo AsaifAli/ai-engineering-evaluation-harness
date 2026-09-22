@@ -49,7 +49,7 @@ a{color:inherit;text-decoration:none}
       <div><div class="brand-title">AI Engineering Harness</div><div class="brand-sub">Evaluation · observability · guardrails · reliability</div></div>
     </div>
     <nav class="nav">
-      <a href="#overview">Overview</a><a href="#ai-quality">AI Quality</a><a href="#experiments">Experiments</a><a href="#traces">Traces</a><a href="#lineage">Lineage</a><a href="#evals">Evaluations</a><a href="#governance">Governance</a>
+      <a href="#overview">Overview</a><a href="#ai-quality">AI Quality</a><a href="#experiments">Experiments</a><a href="#traces">Traces</a><a href="#lineage">Lineage</a><a href="#mlops">MLOps</a><a href="#evals">Evaluations</a><a href="#governance">Governance</a>
     </nav>
   </header>
 
@@ -107,6 +107,11 @@ a{color:inherit;text-decoration:none}
   <section class="section grid-2" id="traces">
     <div class="panel"><div class="panel-inner"><div class="section-head"><div><div class="panel-title">Agent traces</div><div class="panel-note">Normalized execution steps for debugging tool calls, approvals and failures.</div></div></div><div class="table-wrap"><table class="table" style="min-width:720px"><thead><tr><th>Time</th><th>Target</th><th>Workflow</th><th>Status</th><th>Steps</th><th>Duration</th><th>Run</th></tr></thead><tbody id="traceTable"></tbody></table></div></div></div>
     <div class="panel" id="lineage"><div class="panel-inner"><div class="section-head"><div><div class="panel-title">Prompt / model / config lineage</div><div class="panel-note">Version records used to explain which configuration produced an evaluation or run.</div></div></div><div class="table-wrap"><table class="table" style="min-width:600px"><thead><tr><th>Component</th><th>Version</th><th>Active</th><th>Notes</th><th>Created</th></tr></thead><tbody id="lineageTable"></tbody></table></div></div></div>
+  </section>
+  <section class="section grid-3" id="mlops">
+    <div class="panel"><div class="panel-inner"><div class="section-head"><div><div class="panel-title">Model registry</div><div class="panel-note">Versioned runtime models with an explicit promotion threshold.</div></div></div><div id="modelRegistry"></div></div></div>
+    <div class="panel"><div class="panel-inner"><div class="section-head"><div><div class="panel-title">Dataset registry</div><div class="panel-note">Evaluation datasets tracked by content and schema hash.</div></div></div><div id="datasetRegistry"></div></div></div>
+    <div class="panel"><div class="panel-inner"><div class="section-head"><div><div class="panel-title">Experiment tracking</div><div class="panel-note">Every evaluation batch records model, dataset, prompt and config lineage.</div></div></div><div id="experimentRegistry"></div></div></div>
   </section>
 
   <section class="section grid-3" id="governance">
@@ -172,8 +177,8 @@ function renderAIQuality(q){
 
 async function refresh(){
  try{
-  const [ready,m,g,r,e,a,au,integrations,health,quality,experiments,latestExperiments,traces,lineage,judges]=await Promise.all([
-   get('/ready'),get('/api/metrics'),get('/api/gateway/status'),get('/api/llm-runs?limit=200'),get('/api/evaluations?limit=50'),get('/api/approvals?status=pending&limit=20'),get('/api/audit?limit=20'),get('/api/integrations'),get('/api/targets/health'),get('/api/ai-quality'),get('/api/experiments?limit=20'),get('/api/experiments/latest'),get('/api/traces?limit=20'),get('/api/config-registry?limit=50'),get('/api/judges?limit=20')
+  const [ready,m,g,r,e,a,au,integrations,health,quality,experiments,latestExperiments,traces,lineage,judges,mlops]=await Promise.all([
+   get('/ready'),get('/api/metrics'),get('/api/gateway/status'),get('/api/llm-runs?limit=200'),get('/api/evaluations?limit=50'),get('/api/approvals?status=pending&limit=20'),get('/api/audit?limit=20'),get('/api/integrations'),get('/api/targets/health'),get('/api/ai-quality'),get('/api/experiments?limit=20'),get('/api/experiments/latest'),get('/api/traces?limit=20'),get('/api/config-registry?limit=50'),get('/api/judges?limit=20'),get('/api/mlops/overview')
   ]);
   setStatus('apiStatus','API ready','good');
   setStatus('gatewayStatus',g.configured?'Gateway connected':'Gateway fallback-only',g.configured?'good':'warn');
@@ -193,6 +198,11 @@ async function refresh(){
   $('experimentTable').innerHTML=expData.length?expData.slice(0,20).map(x=>`<tr><td>${esc(x.target)}</td><td>${badge(x.status||'unknown',x.status==='regression'?'bad':x.status==='improved'?'good':'warn')}</td><td>${x.score_delta==null?'—':(x.score_delta>=0?'+':'')+(Number(x.score_delta)*100).toFixed(2)+' pts'}</td><td>${esc((x.regressions||[]).join(', ')||'—')}</td><td>${esc((x.improvements||[]).join(', ')||'—')}</td><td>${esc(x.common_cases?.length??'—')}</td></tr>`).join(''):emptyRow(6,'No experiment comparisons yet. Use the compare button or POST /api/experiments/compare.');
   $('traceTable').innerHTML=traces.length?traces.map(x=>`<tr><td>${esc(fmtTime(x.created_at))}</td><td>${esc(x.target||'—')}</td><td>${esc(x.workflow)}</td><td>${badge(x.status,x.status==='completed'?'good':'bad')}</td><td>${Array.isArray(x.steps)?x.steps.length:0}</td><td>${esc(x.duration_ms)} ms</td><td class="mono">${esc(x.run_id)}</td></tr>`).join(''):emptyRow(7,'No normalized agent traces captured yet.');
   $('lineageTable').innerHTML=lineage.length?lineage.map(x=>`<tr><td class="mono">${esc(x.component)}</td><td class="mono">${esc(x.version)}</td><td>${badge(x.active?'active':'inactive',x.active?'good':'warn')}</td><td>${esc(x.notes||'')}</td><td>${esc(fmtTime(x.created_at))}</td></tr>`).join(''):emptyRow(5,'No lineage records registered yet.');
+  const ro=mlops||{};
+  const mr=ro.model_registry||{}, dr=ro.dataset_registry||{}, er=ro.experiment_tracking||{};
+  $('modelRegistry').innerHTML=`<div class="kpi" style="margin-top:4px"><div class="kpi-value">${esc(mr.count??0)}</div><div class="kpi-label">registered · ${esc(mr.production??0)} production · ${esc(mr.candidate??0)} candidate</div></div><div class="dim" style="margin-top:10px">Promotion gate ≥ ${Number(ro.promotion_gate?.min_eval_score??0.9).toFixed(2)} · runtime: ${esc(ro.runtime_model?.name||'—')}</div>`;
+  $('datasetRegistry').innerHTML=`<div class="kpi" style="margin-top:4px"><div class="kpi-value">${esc(dr.count??0)}</div><div class="kpi-label">tracked datasets · ${esc(dr.active??0)} active</div></div><div class="dim" style="margin-top:10px">Content + schema hashes make replay inputs reproducible.</div>`;
+  $('experimentRegistry').innerHTML=`<div class="kpi" style="margin-top:4px"><div class="kpi-value">${esc(er.count??0)}</div><div class="kpi-label">runs tracked · ${esc(er.completed??0)} completed</div></div><div class="dim" style="margin-top:10px">Each quality batch records model, dataset and config lineage.</div>`;
   $('judgeTable').innerHTML=judges.length?judges.map(x=>`<tr><td>${esc(x.target)}</td><td>${esc(x.case_id)}</td><td>${badge(x.status,x.status==='completed'?'good':x.status==='skipped'?'warn':'bad')}</td><td>${x.score==null?'—':(Number(x.score)*100).toFixed(1)+'%'}</td><td class="mono">${esc(x.model||'—')}</td></tr>`).join(''):emptyRow(5,'No judge runs yet.');
   const latestJudge=judges[0];
   $('judgeSummary').innerHTML=latestJudge?`<div class="callout-icon">◎</div><div><strong>${esc(latestJudge.status==='completed'?'Latest judge completed':'Judge '+latestJudge.status)}</strong><p>${esc(latestJudge.rationale||latestJudge.reason||'No rationale recorded.')}</p></div>`:`<div class="callout-icon">◎</div><div><strong>Judge ready</strong><p>Use POST /api/judge for a provider-backed qualitative assessment. Without a gateway session it records an explicit skipped result.</p></div>`;

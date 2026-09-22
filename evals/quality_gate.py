@@ -63,6 +63,7 @@ def main() -> None:
     path = _baseline_path(args.baseline)
     path.parent.mkdir(parents=True, exist_ok=True)
     if args.write_baseline:
+        current = current_summary(args.target)
         targets = current.get("targets", [])
         payload = {"name": args.baseline, "targets": {x["target"]: {"score": x["avg_score"], "cases": x["cases"]} for x in targets}}
         path.write_text(json.dumps(payload, indent=2) + "\n")

@@ -24,6 +24,7 @@ The goal is to demonstrate the engineering layer that sits **after a prototype w
 - Timeout/retry/circuit-breaker controls and deterministic fallback
 - Human-in-the-loop approval before consequential external action
 - Docker, CI and cloud-ready deployment patterns
+- Lightweight MLOps lifecycle: model registry, evaluation-set versioning, experiment tracking and promotion gates (`docs/MLOPS.md`)
 
 ## Five-project harness
 
@@ -97,9 +98,13 @@ Run the complete test suite:
 PYTHONPATH=. python -m pytest -q
 ```
 
+## MLOps lifecycle
+
+The harness includes a deliberately lightweight model/dataset/experiment lifecycle. See `docs/MLOPS.md`.
+
 ## n8n orchestration
 
-Seven importable workflows are included under `workflows/`:
+Six importable workflows are included under `workflows/`:
 
 1. AI issue triage + approval
 2. AI PR review + approval
@@ -107,7 +112,6 @@ Seven importable workflows are included under `workflows/`:
 4. approval decision webhook
 5. LLM health monitor
 6. scheduled five-project AI quality regression gate
-7. scheduled five-project live fleet health check and audit
 
 See `docs/N8N.md`.
 

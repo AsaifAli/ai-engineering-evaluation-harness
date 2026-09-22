@@ -206,6 +206,25 @@ def init_db() -> None:
             quality_id TEXT, status TEXT NOT NULL, provider TEXT, model TEXT, prompt_version TEXT NOT NULL,
             score REAL, criteria TEXT NOT NULL, rationale TEXT NOT NULL, metadata TEXT NOT NULL
         )""")
+        conn.execute("""CREATE TABLE IF NOT EXISTS model_registry (
+            id TEXT PRIMARY KEY, created_at TEXT NOT NULL, name TEXT NOT NULL, provider TEXT NOT NULL,
+            version TEXT NOT NULL, status TEXT NOT NULL, eval_score REAL, eval_dataset_version TEXT,
+            config_version TEXT NOT NULL, metadata TEXT NOT NULL, promoted_at TEXT, retired_at TEXT
+        )""")
+        conn.execute("""CREATE TABLE IF NOT EXISTS dataset_registry (
+            id TEXT PRIMARY KEY, created_at TEXT NOT NULL, name TEXT NOT NULL, version TEXT NOT NULL,
+            content_hash TEXT NOT NULL, schema_hash TEXT NOT NULL, sample_count INTEGER NOT NULL,
+            metadata TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1
+        )""")
+        conn.execute("""CREATE TABLE IF NOT EXISTS experiment_runs (
+            id TEXT PRIMARY KEY, created_at TEXT NOT NULL, name TEXT NOT NULL, target TEXT NOT NULL,
+            model_name TEXT, model_version TEXT, dataset_name TEXT, dataset_version TEXT,
+            prompt_version TEXT NOT NULL, config_version TEXT NOT NULL, status TEXT NOT NULL,
+            metrics TEXT NOT NULL, parameters TEXT NOT NULL, notes TEXT NOT NULL,
+            started_at TEXT NOT NULL, completed_at TEXT
+        )""")
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_model_registry_identity ON model_registry(name, provider, version)")
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_dataset_registry_identity ON dataset_registry(name, version)")
 
 
 def insert_audit(event_type: str, status: str, payload: Dict[str, Any], actor: str = "system", run_id: Optional[str] = None) -> str:
@@ -491,3 +510,165 @@ def metrics() -> Dict[str, Any]:
         "evaluation_runs": eval_total,
         "evaluation_pass_rate_pct": round((eval_passed / eval_cases) * 100, 2) if eval_cases else 0.0,
     }
+
+
+# ---------------------------------------------------------------------------
+# MLOps-lite registry and experiment tracking
+# ---------------------------------------------------------------------------
+
+
+def insert_model(*, name: str, provider: str, version: str, status: str = "candidate",
+                 eval_score: float | None = None, eval_dataset_version: str | None = None,
+                 config_version: str = "v1", metadata: Any | None = None) -> dict[str, Any]:
+    with db() as conn:
+        row = conn.execute(
+            "SELECT * FROM model_registry WHERE name=? AND provider=? AND version=?",
+            (name, provider, version),
+        ).fetchone()
+        if row:
+            item = dict(row)
+            item["metadata"] = json.loads(item["metadata"] or "{}")
+            return item
+        model_id = str(uuid.uuid4())
+        conn.execute(
+            """INSERT INTO model_registry
+            (id, created_at, name, provider, version, status, eval_score, eval_dataset_version,
+             config_version, metadata, promoted_at, retired_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)""",
+            (model_id, utc_now(), name, provider, version, status, eval_score,
+             eval_dataset_version, config_version, json.dumps(metadata or {}, default=str)),
+        )
+        row = conn.execute("SELECT * FROM model_registry WHERE id=?", (model_id,)).fetchone()
+        item = dict(row)
+        item["metadata"] = json.loads(item["metadata"] or "{}")
+        return item
+
+
+def get_model(model_id: str) -> dict[str, Any] | None:
+    with db() as conn:
+        row = conn.execute("SELECT * FROM model_registry WHERE id=?", (model_id,)).fetchone()
+    if not row:
+        return None
+    item = dict(row)
+    item["metadata"] = json.loads(item["metadata"] or "{}")
+    return item
+
+
+def promote_model_record(model_id: str) -> dict[str, Any]:
+    with db() as conn:
+        selected = conn.execute("SELECT * FROM model_registry WHERE id=?", (model_id,)).fetchone()
+        if not selected:
+            raise KeyError("model not found")
+        now = utc_now()
+        conn.execute(
+            "UPDATE model_registry SET status='retired', retired_at=? WHERE name=? AND provider=? AND id<>? AND status='production'",
+            (now, selected["name"], selected["provider"], model_id),
+        )
+        conn.execute(
+            "UPDATE model_registry SET status='production', promoted_at=?, retired_at=NULL WHERE id=?",
+            (now, model_id),
+        )
+        row = conn.execute("SELECT * FROM model_registry WHERE id=?", (model_id,)).fetchone()
+    item = dict(row)
+    item["metadata"] = json.loads(item["metadata"] or "{}")
+    return item
+
+
+def query_models(limit: int = 100) -> list[dict[str, Any]]:
+    with db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM model_registry ORDER BY created_at DESC LIMIT ?",
+            (max(1, min(limit, 500)),),
+        ).fetchall()
+    result = []
+    for row in rows:
+        item = dict(row)
+        item["metadata"] = json.loads(item["metadata"] or "{}")
+        result.append(item)
+    return result
+
+
+def ensure_dataset(*, name: str, version: str, content_hash: str, schema_hash: str,
+                    sample_count: int, metadata: Any | None = None) -> dict[str, Any]:
+    with db() as conn:
+        row = conn.execute(
+            "SELECT * FROM dataset_registry WHERE name=? AND version=?",
+            (name, version),
+        ).fetchone()
+        if row:
+            item = dict(row)
+            item["active"] = bool(item["active"])
+            item["metadata"] = json.loads(item["metadata"] or "{}")
+            return item
+        dataset_id = str(uuid.uuid4())
+        conn.execute(
+            """INSERT INTO dataset_registry
+            (id, created_at, name, version, content_hash, schema_hash, sample_count, metadata, active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)""",
+            (dataset_id, utc_now(), name, version, content_hash, schema_hash, int(sample_count),
+             json.dumps(metadata or {}, default=str)),
+        )
+        row = conn.execute("SELECT * FROM dataset_registry WHERE id=?", (dataset_id,)).fetchone()
+    item = dict(row)
+    item["active"] = bool(item["active"])
+    item["metadata"] = json.loads(item["metadata"] or "{}")
+    return item
+
+
+def query_datasets(limit: int = 200) -> list[dict[str, Any]]:
+    with db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM dataset_registry ORDER BY name ASC, created_at DESC LIMIT ?",
+            (max(1, min(limit, 500)),),
+        ).fetchall()
+    result = []
+    for row in rows:
+        item = dict(row)
+        item["active"] = bool(item["active"])
+        item["metadata"] = json.loads(item["metadata"] or "{}")
+        result.append(item)
+    return result
+
+
+def insert_experiment_run(*, name: str, target: str, model_name: str | None,
+                          model_version: str | None, dataset_name: str | None,
+                          dataset_version: str | None, prompt_version: str,
+                          config_version: str, status: str, metrics: Any,
+                          parameters: Any, notes: str) -> str:
+    experiment_id = str(uuid.uuid4())
+    now = utc_now()
+    with db() as conn:
+        conn.execute(
+            """INSERT INTO experiment_runs
+            (id, created_at, name, target, model_name, model_version, dataset_name, dataset_version,
+             prompt_version, config_version, status, metrics, parameters, notes, started_at, completed_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)""",
+            (experiment_id, now, name, target, model_name, model_version, dataset_name, dataset_version,
+             prompt_version, config_version, status, json.dumps(metrics or {}, default=str),
+             json.dumps(parameters or {}, default=str), notes, now),
+        )
+    return experiment_id
+
+
+def update_experiment_run(experiment_id: str, *, status: str, metrics: Any,
+                          notes: str = "") -> None:
+    with db() as conn:
+        conn.execute(
+            "UPDATE experiment_runs SET status=?, metrics=?, notes=?, completed_at=? WHERE id=?",
+            (status, json.dumps(metrics or {}, default=str), notes, utc_now(), experiment_id),
+        )
+
+
+def query_experiments_runs(limit: int = 100) -> list[dict[str, Any]]:
+    with db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM experiment_runs ORDER BY created_at DESC LIMIT ?",
+            (max(1, min(limit, 500)),),
+        ).fetchall()
+    result = []
+    for row in rows:
+        item = dict(row)
+        item["metrics"] = json.loads(item["metrics"] or "{}")
+        item["parameters"] = json.loads(item["parameters"] or "{}")
+        result.append(item)
+    return result
