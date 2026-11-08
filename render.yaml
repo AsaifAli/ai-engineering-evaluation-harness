@@ -33,3 +33,7 @@ services:
         value: https://quotesense-harness.onrender.com
       - key: WEBQA_BASE_URL
         value: https://webqa-harness.onrender.com
+      - key: LEGACY_LENS_AUTHORIZATION
+        sync: false
+      - key: LEGACY_LENS_GATEWAY_TOKEN
+        sync: false

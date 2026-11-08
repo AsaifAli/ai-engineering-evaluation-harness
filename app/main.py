@@ -107,7 +107,7 @@ def ai_quality(limit: int = 200):
     return quality_metrics(limit)
 
 
-@app.post("/api/ai-quality/run")
+@app.post("/api/ai-quality/run", dependencies=[Depends(require_hub_api_key)])
 def ai_quality_run(target: str = "all"):
     from evals.project_runner import TARGETS, run_all, run_target
     if target == "all":
@@ -120,28 +120,83 @@ def ai_quality_run(target: str = "all"):
 @app.post("/api/targets/{target}/run", dependencies=[Depends(require_hub_api_key)])
 async def run_target_endpoint(target: str, payload: dict, mode: str = "auto"):
     from .targets import TARGETS
+
     if target not in {spec.slug for spec in TARGETS}:
         raise HTTPException(404, f"unknown target: {target}")
+
     spec = next(item for item in TARGETS if item.slug == target)
     selected = mode
+
     if selected == "auto":
         selected = "live" if spec.mode.startswith("live_") else "replay"
+
     try:
         adapter = live_adapter(target) if selected == "live" else replay_adapter(target)
-        result = await timed_run(adapter, str(payload.get("workflow") or "evaluation"), payload)
+        result = await timed_run(
+            adapter,
+            str(payload.get("workflow") or "evaluation"),
+            payload,
+        )
     except AdapterError as exc:
         raise HTTPException(502, str(exc)) from exc
-    trace_steps = result.trace if result.trace is not None else []
+
     run_metadata = {
-        "prompt_version": (result.metadata or {}).get("prompt_version", "target-default-v1"),
-        "model_version": (result.metadata or {}).get("model_version", "target-runtime"),
-        "config_version": (result.metadata or {}).get("config_version", config.HARNESS_CONFIG_VERSION),
+        "prompt_version": (result.metadata or {}).get(
+            "prompt_version", "target-default-v1"
+        ),
+        "model_version": (result.metadata or {}).get(
+            "model_version", "target-runtime"
+        ),
+        "config_version": (result.metadata or {}).get(
+            "config_version", config.HARNESS_CONFIG_VERSION
+        ),
         "integration_mode": spec.mode,
         **(result.metadata or {}),
     }
-    trace_id = insert_trace(run_id=result.run_id, target=target, workflow=result.workflow, status=result.status, duration_ms=result.duration_ms, steps=trace_steps, metadata=run_metadata)
-    insert_audit("target_run", result.status, {"target": target, "mode": selected, "integration_mode": spec.mode, "result": result.output, "warnings": result.warnings, "trace_id": trace_id, "metadata": result.metadata or {}}, run_id=result.run_id)
-    return {
+
+    live_evaluation = None
+
+    if selected == "live":
+        from evals.trajectory import evaluate_live_trajectory
+
+        live_evaluation = evaluate_live_trajectory(target, result)
+
+        if live_evaluation is not None:
+            run_metadata["live_evaluation"] = live_evaluation
+
+    trace_steps = result.trace if result.trace is not None else []
+
+    trace_id = insert_trace(
+        run_id=result.run_id,
+        target=target,
+        workflow=result.workflow,
+        status=result.status,
+        duration_ms=result.duration_ms,
+        steps=trace_steps,
+        metadata=run_metadata,
+    )
+
+    audit_payload = {
+        "target": target,
+        "mode": selected,
+        "integration_mode": spec.mode,
+        "result": result.output,
+        "warnings": result.warnings,
+        "trace_id": trace_id,
+        "metadata": run_metadata,
+    }
+
+    if live_evaluation is not None:
+        audit_payload["live_evaluation"] = live_evaluation
+
+    insert_audit(
+        "target_run",
+        result.status,
+        audit_payload,
+        run_id=result.run_id,
+    )
+
+    response = {
         "target": target,
         "mode": selected,
         "integration_mode": spec.mode,
@@ -154,6 +209,11 @@ async def run_target_endpoint(target: str, payload: dict, mode: str = "auto"):
         "trace_id": trace_id,
         "metadata": run_metadata,
     }
+
+    if live_evaluation is not None:
+        response["live_evaluation"] = live_evaluation
+
+    return response
 
 
 @app.post("/api/targets/fleet-smoke", dependencies=[Depends(require_hub_api_key)])
@@ -318,7 +378,7 @@ def judges(limit: int = 100):
     return query_judges(limit)
 
 
-@app.post("/api/judge")
+@app.post("/api/judge", dependencies=[Depends(require_hub_api_key)])
 async def judge(payload: dict):
     required = ["target", "case_id", "answer", "reference", "context"]
     missing = [key for key in required if key not in payload]
@@ -349,7 +409,7 @@ def approvals(status: Optional[str] = None, limit: int = 50):
     return [dict(row) for row in rows]
 
 
-@app.post("/ai/triage")
+@app.post("/ai/triage", dependencies=[Depends(require_hub_api_key)])
 async def triage(req: IssueRequest):
     result = await run_issue_triage(req)
     audit_id = insert_audit("issue_triage", "completed", {"request": req.model_dump(), "result": result}, run_id=result["run_id"])
@@ -357,7 +417,7 @@ async def triage(req: IssueRequest):
     return result
 
 
-@app.post("/ai/pr-review")
+@app.post("/ai/pr-review", dependencies=[Depends(require_hub_api_key)])
 async def pr_review(req: PRRequest):
     result = await run_pr_review(req)
     audit_id = insert_audit("pr_review", "completed", {"request": req.model_dump(), "result": result}, run_id=result["run_id"])
@@ -365,7 +425,7 @@ async def pr_review(req: PRRequest):
     return result
 
 
-@app.post("/ai/experiment-summary")
+@app.post("/ai/experiment-summary", dependencies=[Depends(require_hub_api_key)])
 async def experiment_summary(req: ExperimentRequest):
     result = await run_experiment_summary(req)
     audit_id = insert_audit("experiment_summary", "completed", {"request": req.model_dump(), "result": result}, run_id=result["run_id"])
@@ -373,14 +433,14 @@ async def experiment_summary(req: ExperimentRequest):
     return result
 
 
-@app.post("/approvals")
+@app.post("/approvals", dependencies=[Depends(require_hub_api_key)])
 def approval_create(req: ApprovalRequest):
     result = create_approval(req.workflow, req.summary, req.payload)
     insert_audit("approval_created", "pending", {**result, "workflow": req.workflow})
     return result
 
 
-@app.post("/approvals/{approval_id}/decision")
+@app.post("/approvals/{approval_id}/decision", dependencies=[Depends(require_hub_api_key)])
 def approval_decision(approval_id: str, req: DecisionRequest):
     try:
         result = decide_approval(approval_id, req.status, req.decided_by, req.decision_note)

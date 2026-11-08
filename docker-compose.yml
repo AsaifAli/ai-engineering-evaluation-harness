@@ -31,6 +31,7 @@ services:
       MAX_INPUT_CHARS: ${MAX_INPUT_CHARS:-12000}
       MIN_CONFIDENCE_FOR_ACTION: ${MIN_CONFIDENCE_FOR_ACTION:-0.70}
       MODEL_PRICING_JSON: ${MODEL_PRICING_JSON:-{}}
+      HUB_API_KEY: ${HUB_API_KEY:-}
     volumes:
       - ./data:/app/data
     restart: unless-stopped

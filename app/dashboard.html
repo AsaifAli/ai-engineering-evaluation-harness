@@ -146,6 +146,52 @@ function emptyRow(cols,msg){return `<tr><td colspan="${cols}" class="empty">${es
 function setStatus(id,text,kind){$(id).className='status '+kind;$(id).innerHTML=`<span class="dot"></span>${esc(text)}`}
 function fmtTime(v){if(!v)return'—';const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString([], {month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'})}
 async function get(path){const r=await fetch(path,{cache:'no-store'});if(!r.ok)throw new Error(path+' '+r.status);return r.json()}
+function requestHubApiKey(){
+return new Promise((resolve,reject)=>{
+    const dialog=document.createElement('dialog');
+    dialog.innerHTML=`
+      <form method="dialog" style="padding:20px;background:#111827;color:white;border-radius:12px;min-width:280px">
+        <h3>Authorize Harness</h3>
+        <input type="password" required autocomplete="off"
+          placeholder="Enter HUB_API_KEY"
+          style="width:100%;padding:12px;margin:12px 0;background:#0f172a;color:white;border:1px solid #475569;border-radius:8px">
+        <div style="display:flex;justify-content:flex-end;gap:8px">
+          <button value="cancel">Cancel</button>
+          <button value="authorize">Authorize</button>
+        </div>
+      </form>`;
+
+    const input=dialog.querySelector('input');
+
+    dialog.addEventListener('close',()=>{
+      const key=input.value.trim();
+      const accepted=dialog.returnValue==='authorize' && key;
+      input.value='';
+      dialog.remove();
+      accepted?resolve(key):reject(new Error('Authorization cancelled.'));
+    });
+
+    document.body.appendChild(dialog);
+    dialog.showModal();
+    input.focus();
+  });
+}
+
+async function postWithHubKey(path,payload,key){
+  const options={
+    method:'POST',
+    headers:{Authorization:`Bearer ${key}`}
+  };
+
+  if(payload!==undefined){
+    options.headers['Content-Type']='application/json';
+    options.body=JSON.stringify(payload);
+  }
+
+  const response=await fetch(path,options);
+  if(!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json();
+}
 function renderBars(el,items,max){if(!items.length){el.innerHTML='<div class="empty">No data yet.</div>';return}el.innerHTML=items.map(x=>`<div class="bar-row"><div class="bar-label">${esc(x.label)}</div><div class="bar"><span style="width:${Math.max(2,Math.min(100,(x.value/max)*100))}%"></span></div><div class="bar-value">${esc(x.text??x.value)}</div></div>`).join('')}
 function renderTargets(g,integrations,health){
  const items=[{name:'Portfolio LLM Gateway',url:g.base_url,status:g.configured?'connected':'standby',kind:g.configured?'good':'warn',meta:'shared model layer'}];
@@ -243,24 +289,77 @@ async function refresh(){
 }
 $('refreshFleet').addEventListener('click',()=>refresh());
 $('compareLatest').addEventListener('click',async()=>{
- try{
-  $('compareLatest').disabled=true;$('compareLatest').textContent='Comparing…';
-  const q=await get('/api/ai-quality?limit=2000');
-  const grouped={};
-  (q.runs||[]).forEach(x=>{grouped[x.target]=grouped[x.target]||[];if(!grouped[x.target].includes(x.batch_id))grouped[x.target].push(x.batch_id)});
-  for(const [target,batches] of Object.entries(grouped)){
-   if(batches.length<2) continue;
-   await fetch('/api/experiments/compare',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({target,baseline_batch_id:batches[1],candidate_batch_id:batches[0]})});
+  try{
+    $('compareLatest').disabled=true;
+    $('compareLatest').textContent='Comparing…';
+
+    const q=await get('/api/ai-quality?limit=2000');
+    const grouped={};
+
+    (q.runs||[]).forEach(x=>{
+      grouped[x.target]=grouped[x.target]||[];
+      if(!grouped[x.target].includes(x.batch_id)){
+        grouped[x.target].push(x.batch_id);
+      }
+    });
+
+    const targets=Object.entries(grouped)
+      .filter(([,batches])=>batches.length>=2);
+
+    if(!targets.length){
+      setStatus('apiStatus','Not enough batches to compare','warn');
+      return;
+    }
+
+    const key=await requestHubApiKey();
+
+    for(const [target,batches] of targets){
+      await postWithHubKey('/api/experiments/compare',{
+        target,
+        baseline_batch_id:batches[1],
+        candidate_batch_id:batches[0]
+      },key);
+    }
+
+    setStatus('apiStatus','Experiment comparisons completed','good');
+
+  }catch(err){
+    if(err.message!=='Authorization cancelled.'){
+      console.error(err);
+      setStatus('apiStatus',err.message,'bad');
+    }
+  }finally{
+    $('compareLatest').disabled=false;
+    $('compareLatest').textContent='Compare latest batches';
+    refresh();
   }
- }catch(err){console.error(err)}
- finally{$('compareLatest').disabled=false;$('compareLatest').textContent='Compare latest batches';refresh()}
 });
+
 $('runQuality').addEventListener('click',async()=>{
- try{
-  $('runQuality').disabled=true;$('runQuality').textContent='Running…';
-  await fetch('/api/ai-quality/run?target=all',{method:'POST'});
- }catch(err){console.error(err)}
- finally{$('runQuality').disabled=false;$('runQuality').textContent='Run five-project replay eval';refresh()}
+  try{
+    $('runQuality').disabled=true;
+    $('runQuality').textContent='Running…';
+
+    const key=await requestHubApiKey();
+
+    await postWithHubKey(
+      '/api/ai-quality/run?target=all',
+      undefined,
+      key
+    );
+
+    setStatus('apiStatus','Replay evaluation completed','good');
+
+  }catch(err){
+    if(err.message!=='Authorization cancelled.'){
+      console.error(err);
+      setStatus('apiStatus',err.message,'bad');
+    }
+  }finally{
+    $('runQuality').disabled=false;
+    $('runQuality').textContent='Run five-project replay eval';
+    refresh();
+  }
 });
 refresh();setInterval(refresh,15000);
 </script>
