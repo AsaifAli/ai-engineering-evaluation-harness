@@ -13,7 +13,7 @@ def require_hub_api_key(authorization: str | None = Header(default=None)) -> Non
     Local development stays frictionless when the variable is unset. Set HUB_API_KEY on the hosted service to restrict replay-evaluation writes to an operator.
     """
     if not HUB_API_KEY:
-        return
+        raise HTTPException(status_code=503, detail="operator replay key is not configured")
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail="missing bearer token")
     token = authorization.split(" ", 1)[1].strip()
