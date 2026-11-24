@@ -82,7 +82,23 @@ def ready():
 
 @app.get("/api/ai-quality")
 def ai_quality(limit: int = 200):
-    return quality_metrics(limit)
+    data = quality_metrics(limit)
+    public_projects = {"evidenceflow", "quotesense"}
+    data["targets"] = {
+        key: value for key, value in data.get("targets", {}).items()
+        if key in public_projects
+    }
+    data["runs"] = [
+        row for row in data.get("runs", [])
+        if row.get("target") in public_projects
+    ]
+    data["target_count"] = len(data["targets"])
+    data["target_gate_passes"] = sum(
+        1 for item in data["targets"].values() if item.get("passed")
+    )
+    scores = [float(item.get("score", 0)) for item in data["targets"].values()]
+    data["platform_score"] = round(sum(scores) / len(scores), 6) if scores else 0.0
+    return data
 
 
 @app.post("/api/ai-quality/run", dependencies=[Depends(require_hub_api_key)])
