@@ -20,16 +20,25 @@ class ProjectEval:
 
 MetricFn = Callable[[dict[str, Any], dict[str, Any]], dict[str, float]]
 
+PROJECT_PACKS = {
+    "evidenceflow": "rag",
+    "quotesense": "document_intelligence",
+}
 
-def evaluate_case(target: str, case_id: str, expected: dict[str, Any], actual: dict[str, Any], *, mode: str) -> ProjectEval:
-    """Evaluate a case through the target's reusable evaluation pack."""
-    from app.targets import TARGETS
 
-    spec = next((item for item in TARGETS if item.slug == target), None)
-    if spec is None:
-        raise KeyError(f"unknown target: {target}")
-
-    pack = get_pack(spec.evaluation_pack)
+def evaluate_case(
+    target: str,
+    case_id: str,
+    expected: dict[str, Any],
+    actual: dict[str, Any],
+    *,
+    mode: str,
+) -> ProjectEval:
+    """Evaluate one EvidenceFlow or QuoteSense fixture against its quality pack."""
+    pack_name = PROJECT_PACKS.get(target)
+    if pack_name is None:
+        raise KeyError(f"unknown evaluation target: {target}")
+    pack = get_pack(pack_name)
     metrics = pack.evaluator(expected, actual)
     weighted = 0.0
     total_weight = 0.0
@@ -49,20 +58,25 @@ def evaluate_case(target: str, case_id: str, expected: dict[str, Any], actual: d
     return ProjectEval(target, case_id, mode, metrics, score, not failures, failures, notes)
 
 
-# Compatibility exports for callers that historically imported these symbols.
-EVALUATORS = {}
-for _target in ("evidenceflow", "legacylens", "quotesense", "webqa", "flowpilot"):
-    from app.targets import TARGETS
-    _spec = next(item for item in TARGETS if item.slug == _target)
-    EVALUATORS[_target] = get_pack(_spec.evaluation_pack).evaluator
+EVALUATORS = {
+    target: get_pack(pack_name).evaluator
+    for target, pack_name in PROJECT_PACKS.items()
+}
+DEFAULT_GATES = {
+    target: get_pack(pack_name).gates
+    for target, pack_name in PROJECT_PACKS.items()
+}
+WEIGHTS = {
+    target: get_pack(pack_name).weights
+    for target, pack_name in PROJECT_PACKS.items()
+}
 
-DEFAULT_GATES = {}
-WEIGHTS = {}
-for _target in EVALUATORS:
-    from app.targets import TARGETS
-    _spec = next(item for item in TARGETS if item.slug == _target)
-    _pack = get_pack(_spec.evaluation_pack)
-    DEFAULT_GATES[_target] = _pack.gates
-    WEIGHTS[_target] = _pack.weights
-
-__all__ = ["ProjectEval", "MetricFn", "evaluate_case", "EVALUATORS", "DEFAULT_GATES", "WEIGHTS", "pack_catalog"]
+__all__ = [
+    "ProjectEval",
+    "MetricFn",
+    "evaluate_case",
+    "EVALUATORS",
+    "DEFAULT_GATES",
+    "WEIGHTS",
+    "pack_catalog",
+]

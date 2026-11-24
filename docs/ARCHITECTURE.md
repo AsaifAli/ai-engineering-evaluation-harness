@@ -1,48 +1,37 @@
-# Architecture and interview story
+# Engineering Assurance architecture
 
-## Control-plane responsibilities
+The agency website remains the public front door. The Evaluation Harness is a small internal service with two responsibilities:
 
-**n8n:** event triggers, schedules, sequencing, external integrations and approval routing.
+1. Store deterministic replay-evaluation results for EvidenceFlow and QuoteSense.
+2. Receive bounded, privacy-safe application activity metadata from those two deployed services.
 
-**FastAPI:** domain logic, guardrails, structured output validation, deterministic comparison logic, reliability controls, telemetry and audit APIs.
+```text
+AI Engineering Studio website
+       |
+       +---- link to read-only Engineering Assurance dashboard
+                                      |
+                                      v
+                        AI Engineering Evaluation Service
+                          |                     |
+                 Replay evaluator       Application event API
+                   /         \              /        \
+            EvidenceFlow   QuoteSense  EvidenceFlow  QuoteSense
+                fixtures    fixtures     telemetry    telemetry
+```
 
-**Shared Portfolio LLM Gateway:** provider/BYOK abstraction and model routing. The Hub only receives a temporary session token.
+## Application boundary
 
-**Evaluation runner:** versioned golden cases and regression scoring for the five portfolio AI workloads, with reusable evaluation packs.
+EvidenceFlow and QuoteSense keep their own ingestion, orchestration, provider, retrieval, validation and business logic. They send one short event after a run completes or fails. Delivery is best-effort and must never block an app workflow.
 
-**Dashboard:** operational observability and review surface; it is not another workflow engine.
+The harness receives only the project slug, event type/status, workflow label, duration, optional model label, request identifier and a small set of numeric/boolean metrics. It does not receive prompts, answers, uploaded documents, extracted quotation fields, supplier names, source excerpts, provider keys or Gateway session tokens.
 
-## Why the LLM does not own numerical experiment comparison
+## Authentication boundary
 
-Metric comparison is deterministic. This prevents a language model from inventing or changing the regression result. The LLM only explains already-computed findings.
+- Dashboard and read-only application summaries are public.
+- Each app has a different bearer token and may submit events only for its own project slug.
+- An operator bearer key gates manually triggered replay evaluations.
+- No model-provider connection or BYOK configuration exists in the harness.
 
-## Human-in-the-loop boundary
+## Storage
 
-AI output is decision support. External side effects such as labels, comments or notifications happen only after approval through the n8n workflow.
-
-## Cross-project adapter layer
-
-The harness is a middle infrastructure layer across the five portfolio AI systems:
-
-1. FlowPilot — AI Automation Command Center
-2. LegacyLens — Agentic Software Modernization
-3. EvidenceFlow — Verified Sparse-First RAG
-4. QuoteSense — Procurement Intelligence
-5. WebQA Intelligence — AI-Assisted Testing
-
-Each target is registered behind an adapter contract. Live-capable targets use project-specific execution APIs; targets that currently expose only a hosted UI or health surface are registered in health/replay mode until a stable execution API is available.
-
-## Target validation
-
-Use `python scripts/validate_targets.py` to validate the five registered target surfaces. A target is marked `healthy` only when its configured health endpoint responds successfully. The harness does not invent live status for targets whose services are unavailable, expired, or unconfigured.
-
-## Modular integration model
-
-The platform separates four contracts so external AI services can be integrated without changing the core dashboard or orchestration layer:
-
-- **Target registration** — URL, health surface, capabilities, adapter and workload/evaluation pack.
-- **Project adapter** — translates service-specific execution and telemetry into the standard `AgentRun` contract.
-- **Evaluation pack** — reusable metrics, weights and quality gates for a workload type such as RAG or agentic workflows.
-- **Versioned dataset** — target-specific golden cases used for replay and regression evaluation.
-
-A simple JSON API can use the built-in `generic_http` adapter. Complex services can provide a custom adapter plugin. Evaluation packs are reusable across services, so a new RAG system can use the same retrieval/grounding benchmark design as EvidenceFlow.
+The active service creates only application-event, replay-quality and evaluation-audit tables. Existing legacy tables are not dropped during an upgrade. Replay results remain distinct from app-reported runtime events so synthetic checks are not confused with live product performance.
