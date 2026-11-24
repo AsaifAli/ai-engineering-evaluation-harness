@@ -246,5 +246,5 @@ This repository is presented as the AI Engineering Studio's engineering evaluati
 
 The existing FastAPI service and `app/dashboard.html` remain the canonical UI. The website links to the separately deployed dashboard; it does not proxy privileged harness routes or collect provider keys. Read-only monitoring is intended for dashboard viewers. Mutating operations (live target runs, experiments, approvals, configuration, model promotion, and integration actions) remain protected by `HUB_API_KEY` and should be available only to an operator deployment.
 
-For website linking, configure the hosted dashboard URL in the website environment as `EVALUATION_HARNESS_DASHBOARD_URL`. Configure the API origin as `EVALUATION_HARNESS_API_URL` only when the website needs to show a non-sensitive configured-state note. Do not expose `HUB_API_KEY`, gateway JWTs, target credentials, or provider keys to the browser.
+For website linking, configure the hosted dashboard URL in the website environment as `EVALUATION_HARNESS_DASHBOARD_URL`. Do not expose `HUB_API_KEY`, gateway JWTs, target credentials, or provider keys to the browser.
 
