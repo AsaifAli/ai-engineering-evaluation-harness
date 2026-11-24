@@ -1,9 +1,8 @@
-import uuid
-
 from fastapi.testclient import TestClient
 
-from app import auth, config
+from app import auth
 from app.main import app
+import app.main as main_module
 
 
 def test_health_and_readiness():
@@ -45,3 +44,33 @@ def test_dashboard_does_not_request_provider_credentials():
         assert response.status_code == 200
         assert "No provider key required" in response.text
         assert "HUB_API_KEY" not in response.text
+
+
+
+def test_public_quality_api_hides_retired_project_history(monkeypatch):
+    monkeypatch.setattr(
+        main_module,
+        "quality_metrics",
+        lambda limit: {
+            "targets": {
+                "evidenceflow": {"score": 0.9, "passed": True},
+                "quotesense": {"score": 0.95, "passed": True},
+                "legacylens": {"score": 0.8, "passed": False},
+            },
+            "runs": [
+                {"target": "evidenceflow"},
+                {"target": "quotesense"},
+                {"target": "legacylens"},
+            ],
+            "target_count": 3,
+            "target_gate_passes": 2,
+            "platform_score": 0.88,
+        },
+    )
+    with TestClient(app) as client:
+        response = client.get("/api/ai-quality")
+    body = response.json()
+    assert set(body["targets"]) == {"evidenceflow", "quotesense"}
+    assert {row["target"] for row in body["runs"]} == {"evidenceflow", "quotesense"}
+    assert body["target_count"] == 2
+    assert body["target_gate_passes"] == 2
