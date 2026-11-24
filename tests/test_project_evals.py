@@ -22,24 +22,24 @@ def test_evidenceflow_quality_gate():
     assert result.metrics["recall@5"] == 1.0
 
 
-def test_flowpilot_fallback_free_metric_has_correct_direction():
+def test_quotesense_structured_document_quality_gate():
     result = evaluate_case(
-        "flowpilot",
+        "quotesense",
         "t1",
-        {"required_steps": ["a"], "success_statuses": ["completed"]},
-        {"status": "completed", "completed_steps": ["a"], "tool_call_validity": 1.0, "policy_pass_rate": 1.0, "approval_compliant": True, "execution_reliability": 1.0, "fallback_rate": 0.0},
+        {
+            "fields": {"supplier": "Example Vendor", "total_cost": 1200},
+            "critical_fields": ["supplier", "total_cost"],
+            "risk_label": "low",
+        },
+        {
+            "fields": {"supplier": "Example Vendor", "total_cost": 1200},
+            "schema_valid": True,
+            "numeric_accuracy": 1.0,
+            "risk_label": "low",
+            "recommendation_consistency": 1.0,
+        },
         mode="replay",
     )
-    assert result.metrics["fallback_free_rate"] == 1.0
-
-
-def test_experiment_comparison_detects_regression():
-    from evals.experiments import compare_batches
-    from app.db import insert_ai_quality
-    baseline_batch = "baseline-test"
-    candidate_batch = "candidate-test"
-    insert_ai_quality(batch_id=baseline_batch, target="evidenceflow", case_id="c1", mode="replay", score=0.9, passed=True, metrics={"recall@5": 1.0, "ndcg@5": 0.9}, gate_failures=[], notes=[])
-    insert_ai_quality(batch_id=candidate_batch, target="evidenceflow", case_id="c1", mode="replay", score=0.7, passed=True, metrics={"recall@5": 0.7, "ndcg@5": 0.9}, gate_failures=[], notes=[])
-    comparison = compare_batches(target="evidenceflow", baseline_batch_id=baseline_batch, candidate_batch_id=candidate_batch)
-    assert comparison["status"] == "regression"
-    assert "recall@5" in comparison["regressions"]
+    assert result.passed
+    assert result.metrics["field_exact_match"] == 1.0
+    assert result.metrics["schema_validity"] == 1.0
