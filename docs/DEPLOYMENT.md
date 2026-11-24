@@ -1,29 +1,51 @@
 # Deployment
 
-## Render
+The harness is a single Render web service defined in `render.yaml`. It serves its read-only dashboard at `/` and its JSON API from the same host.
 
-The repository includes `render.yaml` for the FastAPI service.
+## Render environment
 
-Set the gateway session variables in Render rather than committing them. The project defaults to deterministic mode until `LLM_PROVIDER=gateway` is explicitly enabled.
+Configure these variables on the Evaluation Harness service:
 
-## n8n
+- `DATABASE_URL`: managed PostgreSQL connection string for durable event/evaluation history. Without it, the service falls back to local SQLite.
+- `DB_SCHEMA=harness`.
+- `HUB_API_KEY`: private operator key for manually triggering replay evaluation.
+- `HARNESS_INGEST_TOKENS_JSON`: JSON object with two distinct private values, one for `evidenceflow` and one for `quotesense`.
 
-Run n8n on a persistent n8n deployment or n8n Cloud. Import the workflow JSON files and replace the placeholder HTTP URLs/credentials with the deployed API endpoint and your GitHub integration.
+Generate two independent random values locally:
 
-## Persistence
-
-The sample uses SQLite for portability. For a long-lived multi-instance deployment, use a managed relational database and migrate the storage layer before relying on historical telemetry as the source of truth.
-
-## Five-project target health
-
-For the live fleet-health workflow, configure the five registered target URLs in the API service environment:
-
-```text
-COMMAND_CENTER_BASE_URL=https://ai-automation-api.onrender.com
-LEGACY_LENS_BASE_URL=https://ai-code-modernization-api.onrender.com
-EVIDENCEFLOW_BASE_URL=https://evidenceflow-langgraph.onrender.com
-QUOTESENSE_BASE_URL=https://quotation-analyzer.onrender.com
-WEBQA_BASE_URL=https://web-crawler-agent.onrender.com
+```bash
+openssl rand -hex 32
+openssl rand -hex 32
 ```
 
-The `/api/targets/health` endpoint then checks all five services. n8n workflow `07_five_project_fleet_health.json` schedules that fleet check and records the resulting health state in the Hub audit stream.
+Set the values only in Render environment settings. Do not commit secrets.
+
+## EvidenceFlow and QuoteSense environment
+
+On each application service configure:
+
+```text
+EVALUATION_HARNESS_URL=https://ai-engineering-evaluation-harness.onrender.com
+EVALUATION_HARNESS_INGEST_TOKEN=<that application's own token>
+```
+
+The token must match its project entry in `HARNESS_INGEST_TOKENS_JSON`. Do not reuse the same token for both apps.
+
+The reporting client has a short timeout and treats delivery as best-effort. If the service or credentials are unavailable, the original app request continues normally.
+
+## Website link
+
+The agency website's `/evaluation` page links to:
+
+`https://ai-engineering-evaluation-harness.onrender.com`
+
+No BYOK credentials, provider keys or operator tokens are sent to the browser. The dashboard is read-only; replay writes are operator-authenticated.
+
+## Local run
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+The dashboard will be available at `http://localhost:8000`.
