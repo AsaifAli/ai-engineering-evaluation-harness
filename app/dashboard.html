@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
-<title>AI Engineering Evaluation & Observability</title>
+<title>Engineering Assurance | AI Engineering Studio</title>
 <style>
 :root{
   --bg:#070b14;--bg2:#0b1220;--panel:#0f1726;--panel2:#121c2e;--line:#223047;
@@ -39,6 +39,8 @@ a{color:inherit;text-decoration:none}
 .footer{padding:20px 0 4px;color:var(--faint);font-size:10px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}.refresh{color:var(--muted)}
 @media(max-width:1200px){.kpis{grid-template-columns:repeat(4,1fr)}.grid-2{grid-template-columns:1fr}.grid-3{grid-template-columns:1fr 1fr}}
 @media(max-width:760px){.shell{padding:16px}.hero{align-items:flex-start;flex-direction:column}.hero h1{font-size:30px}.kpis{grid-template-columns:repeat(2,1fr)}.grid-3{grid-template-columns:1fr}.nav{display:none}}
+body.client-view #runQuality,body.client-view #compareLatest{display:none!important}
+body.client-view .nav a[href="#experiments"],body.client-view .nav a[href="#traces"],body.client-view .nav a[href="#lineage"],body.client-view .nav a[href="#mlops"],body.client-view .nav a[href="#evals"]{display:none!important}
 </style>
 </head>
 <body>
@@ -46,7 +48,7 @@ a{color:inherit;text-decoration:none}
   <header class="topbar">
     <div class="brand">
       <div class="logo">AE</div>
-      <div><div class="brand-title">AI Engineering Harness</div><div class="brand-sub">Evaluation · observability · guardrails · reliability</div></div>
+      <div><div class="brand-title">Engineering Assurance</div><div class="brand-sub">Quality evidence · observability · governance · reliability</div></div>
     </div>
     <nav class="nav">
       <a href="#overview">Overview</a><a href="#ai-quality">AI Quality</a><a href="#experiments">Experiments</a><a href="#traces">Traces</a><a href="#lineage">Lineage</a><a href="#mlops">MLOps</a><a href="#evals">Evaluations</a><a href="#governance">Governance</a>
@@ -55,8 +57,8 @@ a{color:inherit;text-decoration:none}
 
   <section class="hero" id="overview">
     <div>
-      <h1>AI Engineering Evaluation &amp; LLMOps</h1>
-      <div class="hero-copy">A reusable control plane for AI systems: instrument every run, enforce guardrails, evaluate golden sets, detect regressions, and keep consequential actions behind human approval.</div>
+      <h1>Engineering assurance for AI systems</h1>
+      <div class="hero-copy">A read-only view into how AI systems are evaluated, monitored and governed. Inspect quality evidence, reliability signals and regression history without connecting a model provider or entering an API key.</div>
     </div>
     <div class="statusbar">
       <div class="status" id="apiStatus"><span class="dot"></span>API checking</div>
@@ -94,7 +96,7 @@ a{color:inherit;text-decoration:none}
   </section>
 
   <section class="section panel" id="ai-quality"><div class="panel-inner">
-    <div class="section-head"><div><div class="panel-title">AI quality evaluations</div><div class="panel-note">Project-specific metrics: retrieval, code migration, extraction, browser QA and agent reliability. Replay rows are clearly marked and are not production quality claims.</div></div><button id="runQuality" style="border:1px solid rgba(125,211,252,.18);background:rgba(125,211,252,.08);color:var(--text);border-radius:9px;padding:8px 10px;font-size:11px;cursor:pointer">Run five-project replay eval</button></div>
+    <div class="section-head"><div><div class="panel-title">AI quality evaluations</div><div class="panel-note">Project-specific metrics: retrieval, code migration, extraction, browser QA and agent reliability. Replay rows are clearly marked and are not production quality claims.</div></div><button id="runQuality" style="border:1px solid rgba(125,211,252,.18);background:rgba(125,211,252,.08);color:var(--text);border-radius:9px;padding:8px 10px;font-size:11px;cursor:pointer">Run replay evaluation</button></div>
     <div id="qualityTargets" class="targets"></div>
   </div></section>
 
@@ -117,11 +119,11 @@ a{color:inherit;text-decoration:none}
   <section class="section grid-3" id="governance">
     <div class="panel"><div class="panel-inner"><div class="panel-title">Quality</div><div class="panel-note">Evaluation and regression posture</div><div class="bar-wrap" id="qualityBars"></div></div></div>
     <div class="panel"><div class="panel-inner"><div class="panel-title">Guardrails</div><div class="panel-note">Latest captured safety states</div><div class="bar-wrap" id="guardrailBars"></div></div></div>
-    <div class="panel"><div class="panel-inner"><div class="panel-title">Portfolio AI systems</div><div class="panel-note">Five registered projects • live, health, or replay mode</div><div class="targets" id="targets"></div></div></div>
+    <div class="panel"><div class="panel-inner"><div class="panel-title">Portfolio AI systems</div><div class="panel-note">Three public engineering references • live, health, or replay mode</div><div class="targets" id="targets"></div></div></div>
   </section>
 
   <section class="section panel" id="fleet-smoke"><div class="panel-inner">
-    <div class="section-head"><div><div class="panel-title">Live fleet smoke</div><div class="panel-note">Latest deployed five-project smoke contract recorded by the harness.</div></div><button id="refreshFleet" style="border:1px solid rgba(74,222,128,.18);background:rgba(74,222,128,.08);color:var(--text);border-radius:9px;padding:8px 10px;font-size:11px;cursor:pointer">Refresh</button></div>
+    <div class="section-head"><div><div class="panel-title">Live fleet smoke</div><div class="panel-note">Latest smoke evidence for the three public engineering references.</div></div><button id="refreshFleet" style="border:1px solid rgba(74,222,128,.18);background:rgba(74,222,128,.08);color:var(--text);border-radius:9px;padding:8px 10px;font-size:11px;cursor:pointer">Refresh</button></div>
     <div id="fleetSmokeContent"><div class="empty">No fleet smoke run recorded yet.</div></div>
   </div></section>
 
@@ -134,9 +136,10 @@ a{color:inherit;text-decoration:none}
     <div class="panel"><div class="panel-inner"><div class="section-head"><div><div class="panel-title">Recent audit trail</div><div class="panel-note">Workflow events, decisions and system activity</div></div></div></div><div class="table-wrap"><table class="table" style="min-width:520px"><thead><tr><th>Time</th><th>Event</th><th>Status</th><th>Actor</th></tr></thead><tbody id="auditTable"></tbody></table></div></div>
   </section>
 
-  <footer class="footer"><div>BYOK credentials remain in the shared Portfolio LLM Gateway. This dashboard reports operational metadata, AI telemetry and evaluation results.</div><div class="refresh" id="refreshFooter">Last refresh —</div></footer>
+  <footer class="footer"><div>Read-only client view · No BYOK or provider key required. Provider credentials remain outside this dashboard in the shared Gateway.</div><div class="refresh" id="refreshFooter">Last refresh —</div></footer>
 </div>
 <script>
+document.body.classList.add('client-view');
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null?'—':n;
 const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -197,7 +200,7 @@ function renderTargets(g,integrations,health){
  const items=[{name:'Portfolio LLM Gateway',url:g.base_url,status:g.configured?'connected':'standby',kind:g.configured?'good':'warn',meta:'shared model layer'}];
  const reg=integrations?.targets||{};
  const hs=Object.fromEntries((health?.targets||[]).map(x=>[x.slug,x]));
- Object.values(reg).forEach(x=>{
+ Object.values(reg).filter(x=>['flowpilot','evidenceflow','quotesense'].includes(x.slug)).forEach(x=>{
    const h=hs[x.slug];
    const status=h?.status==='healthy'?'healthy':x.configured?(h?.status||'configured'):'cataloged';
    const kind=status==='healthy'||status==='configured'?'good':status==='not_configured'||status==='cataloged'?'warn':'bad';
@@ -211,9 +214,10 @@ function renderFleetSmoke(auditRows){
  if(!latest){root.innerHTML='<div class="empty">No fleet smoke run recorded yet. Run the n8n live-smoke workflow to populate this layer.</div>';return}
  let payload={};
  try{payload=typeof latest.payload==='string'?JSON.parse(latest.payload||'{}'):(latest.payload||{})}catch(_){payload={}}
- const targets=Array.isArray(payload.targets)?payload.targets:[];
- const passed=Number(payload.passed??targets.filter(x=>['completed','completed_with_warnings','success','live_adapter_ready'].includes(x.status)).length);
- const total=Number(payload.total ?? (targets.length || 5));
+ const allTargets=Array.isArray(payload.targets)?payload.targets:[];
+ const targets=allTargets.filter(x=>['flowpilot','evidenceflow','quotesense'].includes(x.target));
+ const passed=targets.filter(x=>['completed','completed_with_warnings','success','live_adapter_ready'].includes(x.status)).length;
+ const total=targets.length;
  const overall=payload.status==='passed'&&passed===total;
  const cards=targets.map(t=>{
    const ok=['completed','completed_with_warnings','success','live_adapter_ready'].includes(t.status);
@@ -228,7 +232,7 @@ function renderFleetSmoke(auditRows){
 
 function renderAIQuality(q){
  const data=q?.targets||{};
- const names={flowpilot:'FlowPilot',legacylens:'LegacyLens',evidenceflow:'EvidenceFlow',quotesense:'QuoteSense',webqa:'WebQA Intelligence'};
+ const names={flowpilot:'FlowPilot',evidenceflow:'EvidenceFlow',quotesense:'QuoteSense'};
  const highlights={
   evidenceflow:['recall@5','ndcg@5','mrr','citation_correctness','groundedness'],
   legacylens:['syntax_pass_rate','unit_test_pass_rate','semantic_verification','release_gate'],
@@ -244,7 +248,7 @@ function renderAIQuality(q){
    const delta=item?.delta_vs_previous==null?'first run':((item.delta_vs_previous>=0?'+':'')+(item.delta_vs_previous*100).toFixed(2)+' pts');
    return `<div class="target"><div style="flex:1;min-width:0"><div class="target-name">${esc(name)}</div><div class="target-url">mode: ${esc(item?.mode||'—')} · case: ${esc(item?.case_id||'—')} · delta: ${esc(delta)}</div><div class="bar-wrap" style="margin-top:8px">${rows||'<div class="dim">No project-specific metrics captured yet.</div>'}</div></div><div style="text-align:right">${badge(status,kind)}<div style="font-size:18px;font-weight:750;margin-top:7px">${item? (Number(item.score)*100).toFixed(1)+'%' : '—'}</div></div></div>`;
  }).join('');
- if(!Object.keys(data).length) $('qualityTargets').innerHTML='<div class="empty">No AI quality runs yet. Run the five-project replay evaluation to populate this layer.</div>';
+ if(!Object.keys(data).length) $('qualityTargets').innerHTML='<div class="empty">No AI quality runs yet. Recorded evaluation evidence for the public engineering references will appear here.</div>';
 }
 
 async function refresh(){
@@ -267,17 +271,20 @@ async function refresh(){
   renderTargets(g,integrations,health);
   renderFleetSmoke(au);
   renderAIQuality(quality);
-  const expData=(experiments||[]).length ? experiments : Object.values(latestExperiments?.targets||{}).map(x=>({...x, status:x.status||'first_run'}));
+  const publicTargets=new Set(['flowpilot','evidenceflow','quotesense']);
+  const expData=((experiments||[]).length ? experiments : Object.values(latestExperiments?.targets||{}).map(x=>({...x, status:x.status||'first_run'}))).filter(x=>publicTargets.has(x.target));
   $('experimentTable').innerHTML=expData.length?expData.slice(0,20).map(x=>`<tr><td>${esc(x.target)}</td><td>${badge(x.status||'unknown',x.status==='regression'?'bad':x.status==='improved'?'good':'warn')}</td><td>${x.score_delta==null?'—':(x.score_delta>=0?'+':'')+(Number(x.score_delta)*100).toFixed(2)+' pts'}</td><td>${esc((x.regressions||[]).join(', ')||'—')}</td><td>${esc((x.improvements||[]).join(', ')||'—')}</td><td>${esc(x.common_cases?.length??'—')}</td></tr>`).join(''):emptyRow(6,'No experiment comparisons yet. Use the compare button or POST /api/experiments/compare.');
-  $('traceTable').innerHTML=traces.length?traces.map(x=>`<tr><td>${esc(fmtTime(x.created_at))}</td><td>${esc(x.target||'—')}</td><td>${esc(x.workflow)}</td><td>${badge(x.status,x.status==='completed'?'good':'bad')}</td><td>${Array.isArray(x.steps)?x.steps.length:0}</td><td>${esc(x.duration_ms)} ms</td><td class="mono">${esc(x.run_id)}</td></tr>`).join(''):emptyRow(7,'No normalized agent traces captured yet.');
+  const publicTraces=traces.filter(x=>publicTargets.has(x.target));
+  $('traceTable').innerHTML=publicTraces.length?publicTraces.map(x=>`<tr><td>${esc(fmtTime(x.created_at))}</td><td>${esc(x.target||'—')}</td><td>${esc(x.workflow)}</td><td>${badge(x.status,x.status==='completed'?'good':'bad')}</td><td>${Array.isArray(x.steps)?x.steps.length:0}</td><td>${esc(x.duration_ms)} ms</td><td class="mono">${esc(x.run_id)}</td></tr>`).join(''):emptyRow(7,'No normalized agent traces captured yet.');
   $('lineageTable').innerHTML=lineage.length?lineage.map(x=>`<tr><td class="mono">${esc(x.component)}</td><td class="mono">${esc(x.version)}</td><td>${badge(x.active?'active':'inactive',x.active?'good':'warn')}</td><td>${esc(x.notes||'')}</td><td>${esc(fmtTime(x.created_at))}</td></tr>`).join(''):emptyRow(5,'No lineage records registered yet.');
   const ro=mlops||{};
   const mr=ro.model_registry||{}, dr=ro.dataset_registry||{}, er=ro.experiment_tracking||{};
   $('modelRegistry').innerHTML=`<div class="kpi" style="margin-top:4px"><div class="kpi-value">${esc(mr.count??0)}</div><div class="kpi-label">registered · ${esc(mr.production??0)} production · ${esc(mr.candidate??0)} candidate</div></div><div class="dim" style="margin-top:10px">Promotion gate ≥ ${Number(ro.promotion_gate?.min_eval_score??0.9).toFixed(2)} · runtime: ${esc(ro.runtime_model?.name||'—')}</div>`;
   $('datasetRegistry').innerHTML=`<div class="kpi" style="margin-top:4px"><div class="kpi-value">${esc(dr.count??0)}</div><div class="kpi-label">tracked datasets · ${esc(dr.active??0)} active</div></div><div class="dim" style="margin-top:10px">Content + schema hashes make replay inputs reproducible.</div>`;
   $('experimentRegistry').innerHTML=`<div class="kpi" style="margin-top:4px"><div class="kpi-value">${esc(er.count??0)}</div><div class="kpi-label">runs tracked · ${esc(er.completed??0)} completed</div></div><div class="dim" style="margin-top:10px">Each quality batch records model, dataset and config lineage.</div>`;
-  $('judgeTable').innerHTML=judges.length?judges.map(x=>`<tr><td>${esc(x.target)}</td><td>${esc(x.case_id)}</td><td>${badge(x.status,x.status==='completed'?'good':x.status==='skipped'?'warn':'bad')}</td><td>${x.score==null?'—':(Number(x.score)*100).toFixed(1)+'%'}</td><td class="mono">${esc(x.model||'—')}</td></tr>`).join(''):emptyRow(5,'No judge runs yet.');
-  const latestJudge=judges[0];
+  const publicJudges=judges.filter(x=>publicTargets.has(x.target));
+  $('judgeTable').innerHTML=publicJudges.length?publicJudges.map(x=>`<tr><td>${esc(x.target)}</td><td>${esc(x.case_id)}</td><td>${badge(x.status,x.status==='completed'?'good':x.status==='skipped'?'warn':'bad')}</td><td>${x.score==null?'—':(Number(x.score)*100).toFixed(1)+'%'}</td><td class="mono">${esc(x.model||'—')}</td></tr>`).join(''):emptyRow(5,'No judge runs yet.');
+  const latestJudge=publicJudges[0];
   $('judgeSummary').innerHTML=latestJudge?`<div class="callout-icon">◎</div><div><strong>${esc(latestJudge.status==='completed'?'Latest judge completed':'Judge '+latestJudge.status)}</strong><p>${esc(latestJudge.rationale||latestJudge.reason||'No rationale recorded.')}</p></div>`:`<div class="callout-icon">◎</div><div><strong>Judge ready</strong><p>Use POST /api/judge for a provider-backed qualitative assessment. Without a gateway session it records an explicit skipped result.</p></div>`;
 
   $('runsTable').innerHTML=r.length?r.slice(0,30).map(x=>`<tr><td>${esc(fmtTime(x.created_at))}</td><td>${esc(x.workflow)}</td><td class="mono">${esc(x.model)}</td><td class="mono">${esc(x.prompt_version)}</td><td>${x.status==='success'?badge(x.fallback_used?'success · fallback':'success','good'):badge(x.status,'bad')}</td><td>${esc(x.latency_ms)} ms</td><td>${badge(x.guardrail_status,x.guardrail_status==='flagged'?'warn':'good')}</td><td class="mono">${esc(x.run_id)}</td></tr>`).join(''):emptyRow(8,'No AI runs captured yet.');
