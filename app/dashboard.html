@@ -40,6 +40,7 @@ a{color:inherit;text-decoration:none}
 @media(max-width:1200px){.kpis{grid-template-columns:repeat(4,1fr)}.grid-2{grid-template-columns:1fr}.grid-3{grid-template-columns:1fr 1fr}}
 @media(max-width:760px){.shell{padding:16px}.hero{align-items:flex-start;flex-direction:column}.hero h1{font-size:30px}.kpis{grid-template-columns:repeat(2,1fr)}.grid-3{grid-template-columns:1fr}.nav{display:none}}
 body.client-view #runQuality,body.client-view #compareLatest{display:none!important}
+body.client-view #experiments,body.client-view #traces,body.client-view #mlops,body.client-view #runs,body.client-view #evals{display:none!important}
 body.client-view .nav a[href="#experiments"],body.client-view .nav a[href="#traces"],body.client-view .nav a[href="#lineage"],body.client-view .nav a[href="#mlops"],body.client-view .nav a[href="#evals"]{display:none!important}
 </style>
 </head>
@@ -218,7 +219,7 @@ function renderFleetSmoke(auditRows){
  const targets=allTargets.filter(x=>['flowpilot','evidenceflow','quotesense'].includes(x.target));
  const passed=targets.filter(x=>['completed','completed_with_warnings','success','live_adapter_ready'].includes(x.status)).length;
  const total=targets.length;
- const overall=payload.status==='passed'&&passed===total;
+ const overall=targets.length>0&&payload.status==='passed'&&passed===total;
  const cards=targets.map(t=>{
    const ok=['completed','completed_with_warnings','success','live_adapter_ready'].includes(t.status);
    const kind=ok?'good':t.status==='pending'?'warn':'bad';
@@ -227,7 +228,7 @@ function renderFleetSmoke(auditRows){
    const extra=t.error?String(t.error):detail;
    return `<div class="fleet-card ${kind}"><div class="target-name">${esc(name)}</div><div class="fleet-state"><span class="dot"></span>${esc(ok?'healthy':t.status||'unknown')}</div><div class="target-url">${esc(extra)}</div></div>`;
  }).join('');
- root.innerHTML=`<div class="fleet-summary"><div><div class="fleet-score">${passed}/${total}</div><div class="fleet-meta">${overall?'All live smoke targets passed':'Fleet attention required'} · ${esc(fmtTime(latest.created_at))} · triggered by ${esc(latest.actor||'system')}</div></div>${badge(overall?'passed':'attention',overall?'good':'bad')}</div><div class="fleet-grid">${cards||'<div class="empty">Fleet event recorded without target details.</div>'}</div>`;
+ root.innerHTML=`<div class="fleet-summary"><div><div class="fleet-score">${passed}/${total}</div><div class="fleet-meta">${overall?'All public reference checks passed':targets.length?'Public reference checks need attention':'No public reference smoke recorded'} · ${esc(fmtTime(latest.created_at))} · triggered by ${esc(latest.actor||'system')}</div></div>${badge(overall?'passed':'attention',overall?'good':'bad')}</div><div class="fleet-grid">${cards||'<div class="empty">Fleet event recorded without target details.</div>'}</div>`;
 }
 
 function renderAIQuality(q){
