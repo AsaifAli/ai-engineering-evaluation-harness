@@ -14,7 +14,7 @@ from .config import DATABASE_URL, DB_PATH, DB_SCHEMA
 try:
     import psycopg
     from psycopg.rows import dict_row
-except ImportError:  # pragma: no cover - installed in production via requirements.txt
+except ImportError:  # pragma: no cover - required only for hosted PostgreSQL
     psycopg = None
     dict_row = None
 
@@ -34,19 +34,14 @@ DB_FILE = Path(DB_PATH)
 DB_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 
-def backend() -> str:
-    return "postgresql" if DATABASE_URL else "sqlite"
-
-
 class _PostgresConnection:
-    """Small compatibility wrapper so the existing repository code can stay backend-neutral."""
+    """Keep the existing SQLite-style query syntax portable to psycopg."""
 
     def __init__(self, connection):
         self._connection = connection
 
     @staticmethod
     def _adapt_sql(sql: str) -> str:
-        # Existing application queries use SQLite-style '?'. PostgreSQL/psycopg uses '%s'.
         return sql.replace("?", "%s")
 
     def execute(self, sql: str, params=None):
@@ -97,7 +92,8 @@ def db() -> Iterator[Any]:
 def _existing_ai_quality_columns(conn) -> set[str]:
     if DATABASE_URL:
         rows = conn.execute(
-            "SELECT column_name FROM information_schema.columns WHERE table_schema=? AND table_name=?",
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_schema=? AND table_name=?",
             (_SCHEMA, "ai_quality_runs"),
         ).fetchall()
         return {row["column_name"] for row in rows}
@@ -106,11 +102,7 @@ def _existing_ai_quality_columns(conn) -> set[str]:
 
 
 def init_db() -> None:
-    """Create only the event/evaluation tables required by the lean service.
-
-    Existing legacy tables are intentionally not dropped or rewritten, so an
-    existing hosted database keeps its historical data during this trim.
-    """
+    """Create the active tables only; never drop legacy tables or stored history."""
     with db() as conn:
         conn.execute("""CREATE TABLE IF NOT EXISTS audit_events (
             id TEXT PRIMARY KEY,
@@ -155,6 +147,9 @@ def init_db() -> None:
             config_version TEXT NOT NULL DEFAULT 'v1',
             experiment_id TEXT
         )""")
+
+        # Upgrade older evaluation rows in place. Other legacy tables, if
+        # present, are deliberately left intact for safe migration.
         columns = _existing_ai_quality_columns(conn)
         migrations = {
             "batch_id": "ALTER TABLE ai_quality_runs ADD COLUMN batch_id TEXT NOT NULL DEFAULT 'legacy-batch'",
@@ -168,11 +163,24 @@ def init_db() -> None:
             if column not in columns:
                 conn.execute(statement)
 
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_ai_quality_target_created "
+            "ON ai_quality_runs(target, created_at)"
+        )
 
 
-def insert_application_event(*, event_id: str, project: str, event_type: str, status: str,
-                            workflow: str, duration_ms: float | None, model: str | None,
-                            request_id: str | None, metrics: Any) -> bool:
+def insert_application_event(
+    *,
+    event_id: str,
+    project: str,
+    event_type: str,
+    status: str,
+    workflow: str,
+    duration_ms: float | None,
+    model: str | None,
+    request_id: str | None,
+    metrics: Any,
+) -> bool:
     """Persist a bounded project event. Event IDs make retries idempotent."""
     with db() as conn:
         cursor = conn.execute(
@@ -180,8 +188,18 @@ def insert_application_event(*, event_id: str, project: str, event_type: str, st
             (id, created_at, project, event_type, status, workflow, duration_ms, model, request_id, metrics)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO NOTHING""",
-            (event_id, utc_now(), project, event_type, status, workflow, duration_ms,
-             model, request_id, json.dumps(metrics or {}, allow_nan=False)),
+            (
+                event_id,
+                utc_now(),
+                project,
+                event_type,
+                status,
+                workflow,
+                duration_ms,
+                model,
+                request_id,
+                json.dumps(metrics or {}, allow_nan=False),
+            ),
         )
         return getattr(cursor, "rowcount", 0) == 1
 
@@ -199,6 +217,7 @@ def query_application_events(limit: int = 60, project: str | None = None) -> lis
                 "SELECT * FROM application_events ORDER BY created_at DESC LIMIT ?",
                 (bounded_limit,),
             ).fetchall()
+
     result = []
     for row in rows:
         item = dict(row)
@@ -207,51 +226,40 @@ def query_application_events(limit: int = 60, project: str | None = None) -> lis
     return result
 
 
-def insert_audit(event_type: str, status: str, payload: Dict[str, Any], actor: str = "system", run_id: Optional[str] = None) -> str:
+def insert_audit(
+    event_type: str,
+    status: str,
+    payload: Dict[str, Any],
+    actor: str = "system",
+    run_id: Optional[str] = None,
+) -> str:
     event_id = str(uuid.uuid4())
     with db() as conn:
         conn.execute(
-            "INSERT INTO audit_events (id, created_at, event_type, status, actor, run_id, payload) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO audit_events (id, created_at, event_type, status, actor, run_id, payload) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
             (event_id, utc_now(), event_type, status, actor, run_id, json.dumps(payload, default=str)),
         )
     return event_id
 
 
-def insert_llm_run(*, run_id: str, workflow: str, operation: str, provider: str, model: str,
-                   prompt_version: str, latency_ms: float, status: str, fallback_used: bool,
-                   input_tokens: Optional[int], output_tokens: Optional[int], total_tokens: Optional[int],
-                   estimated_cost_usd: Optional[float], guardrail_status: str, error: Optional[str] = None) -> str:
-    run_record_id = str(uuid.uuid4())
-    with db() as conn:
-        conn.execute(
-            """INSERT INTO llm_runs
-            (id, created_at, run_id, workflow, operation, provider, model, prompt_version, latency_ms,
-             status, fallback_used, input_tokens, output_tokens, total_tokens, estimated_cost_usd,
-             guardrail_status, error)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (run_record_id, utc_now(), run_id, workflow, operation, provider, model, prompt_version,
-             latency_ms, status, int(fallback_used), input_tokens, output_tokens, total_tokens,
-             estimated_cost_usd, guardrail_status, error),
-        )
-    return run_record_id
-
-
-def insert_evaluation(*, eval_suite: str, workflow: str, provider: str, model: str,
-                      passed: int, total: int, score: float, details: Any) -> str:
-    evaluation_id = str(uuid.uuid4())
-    with db() as conn:
-        conn.execute(
-            "INSERT INTO evaluation_runs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (evaluation_id, utc_now(), eval_suite, workflow, provider, model,
-             passed, total, score, json.dumps(details, default=str)),
-        )
-    return evaluation_id
-
-
-def insert_ai_quality(*, batch_id: str, target: str, case_id: str, mode: str, score: float, passed: bool,
-                     metrics: Any, gate_failures: Any, notes: Any, dataset_version: str = "v1",
-                     prompt_version: str = "not-applicable", model_version: str = "not-applicable",
-                     config_version: str = "v1", experiment_id: str | None = None) -> str:
+def insert_ai_quality(
+    *,
+    batch_id: str,
+    target: str,
+    case_id: str,
+    mode: str,
+    score: float,
+    passed: bool,
+    metrics: Any,
+    gate_failures: Any,
+    notes: Any,
+    dataset_version: str = "v1",
+    prompt_version: str = "not-applicable",
+    model_version: str = "not-applicable",
+    config_version: str = "v1",
+    experiment_id: str | None = None,
+) -> str:
     quality_id = str(uuid.uuid4())
     with db() as conn:
         conn.execute(
@@ -259,27 +267,43 @@ def insert_ai_quality(*, batch_id: str, target: str, case_id: str, mode: str, sc
             (id, created_at, batch_id, target, case_id, mode, passed, score, metrics, gate_failures, notes,
              dataset_version, prompt_version, model_version, config_version, experiment_id)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (quality_id, utc_now(), batch_id, target, case_id, mode, int(passed), score,
-             json.dumps(metrics, default=str), json.dumps(gate_failures, default=str), json.dumps(notes, default=str),
-             dataset_version, prompt_version, model_version, config_version, experiment_id),
+            (
+                quality_id,
+                utc_now(),
+                batch_id,
+                target,
+                case_id,
+                mode,
+                int(passed),
+                score,
+                json.dumps(metrics, default=str),
+                json.dumps(gate_failures, default=str),
+                json.dumps(notes, default=str),
+                dataset_version,
+                prompt_version,
+                model_version,
+                config_version,
+                experiment_id,
+            ),
         )
     return quality_id
 
 
 def quality_metrics(limit: int = 400) -> Dict[str, Any]:
+    bounded_limit = max(1, min(int(limit), 2000))
     with db() as conn:
         rows = conn.execute(
             "SELECT * FROM ai_quality_runs ORDER BY created_at DESC LIMIT ?",
-            (max(1, min(limit, 2000)),),
+            (bounded_limit,),
         ).fetchall()
 
     parsed = []
     for row in rows:
         item = dict(row)
         item["passed"] = bool(item["passed"])
-        item["metrics"] = json.loads(item["metrics"] or "{}")
-        item["gate_failures"] = json.loads(item["gate_failures"] or "[]")
-        item["notes"] = json.loads(item["notes"] or "[]")
+        item["metrics"] = json.loads(item.get("metrics") or "{}")
+        item["gate_failures"] = json.loads(item.get("gate_failures") or "[]")
+        item["notes"] = json.loads(item.get("notes") or "[]")
         parsed.append(item)
 
     by_target: dict[str, dict[str, Any]] = {}
@@ -287,18 +311,39 @@ def quality_metrics(limit: int = 400) -> Dict[str, Any]:
         target_rows = [item for item in parsed if item["target"] == target]
         latest_batch = target_rows[0]["batch_id"]
         latest_rows = [item for item in target_rows if item["batch_id"] == latest_batch]
-        previous_batch = next((item["batch_id"] for item in target_rows if item["batch_id"] != latest_batch), None)
-        previous_rows = [item for item in target_rows if item["batch_id"] == previous_batch] if previous_batch else []
+        previous_batch = next(
+            (item["batch_id"] for item in target_rows if item["batch_id"] != latest_batch),
+            None,
+        )
+        previous_rows = (
+            [item for item in target_rows if item["batch_id"] == previous_batch]
+            if previous_batch
+            else []
+        )
 
         metric_names = sorted({key for item in latest_rows for key in item["metrics"]})
         aggregate_metrics = {
-            name: round(sum(float(item["metrics"].get(name, 0.0)) for item in latest_rows) / sum(name in item["metrics"] for item in latest_rows), 6)
+            name: round(
+                sum(float(item["metrics"].get(name, 0.0)) for item in latest_rows)
+                / sum(name in item["metrics"] for item in latest_rows),
+                6,
+            )
             for name in metric_names
             if any(name in item["metrics"] for item in latest_rows)
         }
-        score = round(sum(float(item["score"]) for item in latest_rows) / len(latest_rows), 6) if latest_rows else 0.0
-        previous_score = round(sum(float(item["score"]) for item in previous_rows) / len(previous_rows), 6) if previous_rows else None
-        failures = sorted({failure for item in latest_rows for failure in item["gate_failures"]})
+        score = (
+            round(sum(float(item["score"]) for item in latest_rows) / len(latest_rows), 6)
+            if latest_rows
+            else 0.0
+        )
+        previous_score = (
+            round(sum(float(item["score"]) for item in previous_rows) / len(previous_rows), 6)
+            if previous_rows
+            else None
+        )
+        failures = sorted(
+            {failure for item in latest_rows for failure in item["gate_failures"]}
+        )
         by_target[target] = {
             "score": score,
             "passed": all(item["passed"] for item in latest_rows) if latest_rows else False,
@@ -318,6 +363,7 @@ def quality_metrics(limit: int = 400) -> Dict[str, Any]:
                 "experiment_id": latest_rows[0].get("experiment_id"),
             },
         }
+
     scores = [float(item["score"]) for item in by_target.values()]
     return {
         "runs": parsed,
@@ -326,329 +372,3 @@ def quality_metrics(limit: int = 400) -> Dict[str, Any]:
         "target_gate_passes": sum(1 for item in by_target.values() if item["passed"]),
         "platform_score": round(sum(scores) / len(scores), 6) if scores else 0.0,
     }
-
-
-
-def get_quality_batch(target: str, batch_id: str) -> list[dict[str, Any]]:
-    with db() as conn:
-        rows = conn.execute("SELECT * FROM ai_quality_runs WHERE target=? AND batch_id=? ORDER BY created_at ASC", (target, batch_id)).fetchall()
-    parsed: list[dict[str, Any]] = []
-    for row in rows:
-        item = dict(row)
-        item["passed"] = bool(item["passed"])
-        item["metrics"] = json.loads(item["metrics"] or "{}")
-        item["gate_failures"] = json.loads(item["gate_failures"] or "[]")
-        item["notes"] = json.loads(item["notes"] or "[]")
-        parsed.append(item)
-    return parsed
-
-
-def insert_trace(*, run_id: str, target: str | None, workflow: str, status: str, duration_ms: float, steps: Any, metadata: Any) -> str:
-    trace_id = str(uuid.uuid4())
-    with db() as conn:
-        conn.execute(
-            "INSERT INTO traces (id, created_at, run_id, target, workflow, status, duration_ms, steps, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (trace_id, utc_now(), run_id, target, workflow, status, duration_ms, json.dumps(steps, default=str), json.dumps(metadata, default=str)),
-        )
-    return trace_id
-
-
-def insert_config(*, component: str, version: str, config: Any, notes: str = "", active: bool = True) -> str:
-    config_id = str(uuid.uuid4())
-    with db() as conn:
-        conn.execute("INSERT INTO config_registry (id, created_at, component, version, config, notes, active) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                     (config_id, utc_now(), component, version, json.dumps(config, default=str), notes, int(active)))
-    return config_id
-
-
-def query_configs(limit: int = 200) -> list[dict[str, Any]]:
-    with db() as conn:
-        rows = conn.execute("SELECT * FROM config_registry ORDER BY created_at DESC LIMIT ?", (max(1, min(limit, 500)),)).fetchall()
-    result = []
-    for row in rows:
-        item = dict(row)
-        item["active"] = bool(item["active"])
-        item["config"] = json.loads(item["config"] or "{}")
-        result.append(item)
-    return result
-
-
-def insert_experiment_comparison(*, experiment_id: str, target: str, baseline_batch_id: str, candidate_batch_id: str, comparison: dict[str, Any]) -> str:
-    comparison_id = str(uuid.uuid4())
-    with db() as conn:
-        conn.execute(
-            "INSERT INTO experiment_comparisons (id, created_at, experiment_id, target, baseline_batch_id, candidate_batch_id, status, passed, score_delta, metrics, regressions, improvements) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (comparison_id, utc_now(), experiment_id, target, baseline_batch_id, candidate_batch_id, comparison["status"], int(comparison["passed"]), comparison["score_delta"],
-             json.dumps(comparison["metrics"], default=str), json.dumps(comparison["regressions"], default=str), json.dumps(comparison["improvements"], default=str)),
-        )
-    return comparison_id
-
-
-def query_experiments(limit: int = 100) -> list[dict[str, Any]]:
-    with db() as conn:
-        rows = conn.execute("SELECT * FROM experiment_comparisons ORDER BY created_at DESC LIMIT ?", (max(1, min(limit, 200)),)).fetchall()
-    result = []
-    for row in rows:
-        item = dict(row)
-        item["passed"] = bool(item["passed"])
-        item["metrics"] = json.loads(item["metrics"] or "{}")
-        item["regressions"] = json.loads(item["regressions"] or "[]")
-        item["improvements"] = json.loads(item["improvements"] or "[]")
-        result.append(item)
-    return result
-
-
-def insert_judge_run(*, target: str, case_id: str, quality_id: str | None, status: str, provider: str | None, model: str | None, prompt_version: str, score: float | None, criteria: Any, rationale: str, metadata: Any | None = None, **_: Any) -> str:
-    judge_id = str(uuid.uuid4())
-    with db() as conn:
-        conn.execute(
-            "INSERT INTO judge_runs (id, created_at, target, case_id, quality_id, status, provider, model, prompt_version, score, criteria, rationale, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (judge_id, utc_now(), target, case_id, quality_id, status, provider, model, prompt_version, score, json.dumps(criteria, default=str), rationale, json.dumps(metadata or {}, default=str)),
-        )
-    return judge_id
-
-
-def query_judges(limit: int = 100) -> list[dict[str, Any]]:
-    with db() as conn:
-        rows = conn.execute("SELECT * FROM judge_runs ORDER BY created_at DESC LIMIT ?", (max(1, min(limit, 200)),)).fetchall()
-    result = []
-    for row in rows:
-        item = dict(row)
-        item["criteria"] = json.loads(item["criteria"] or "{}")
-        item["metadata"] = json.loads(item["metadata"] or "{}")
-        result.append(item)
-    return result
-
-
-def query_traces(limit: int = 100, run_id: str | None = None) -> list[dict[str, Any]]:
-    with db() as conn:
-        if run_id:
-            rows = conn.execute("SELECT * FROM traces WHERE run_id=? ORDER BY created_at DESC LIMIT ?", (run_id, max(1, min(limit, 200)))).fetchall()
-        else:
-            rows = conn.execute("SELECT * FROM traces ORDER BY created_at DESC LIMIT ?", (max(1, min(limit, 200)),)).fetchall()
-    result = []
-    for row in rows:
-        item = dict(row)
-        item["steps"] = json.loads(item["steps"] or "[]")
-        item["metadata"] = json.loads(item["metadata"] or "{}")
-        result.append(item)
-    return result
-
-def create_approval(workflow: str, summary: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-    approval_id = str(uuid.uuid4())
-    with db() as conn:
-        conn.execute(
-            "INSERT INTO approvals (id, created_at, status, workflow, summary, payload, decided_at, decided_by, decision_note) VALUES (?, ?, 'pending', ?, ?, ?, NULL, NULL, NULL)",
-            (approval_id, utc_now(), workflow, summary, json.dumps(payload, default=str)),
-        )
-    return {"approval_id": approval_id, "status": "pending"}
-
-
-def decide_approval(approval_id: str, status: str, decided_by: str, decision_note: str) -> Dict[str, Any]:
-    with db() as conn:
-        row = conn.execute("SELECT * FROM approvals WHERE id=?", (approval_id,)).fetchone()
-        if not row:
-            raise KeyError("approval not found")
-        conn.execute(
-            "UPDATE approvals SET status=?, decided_at=?, decided_by=?, decision_note=? WHERE id=?",
-            (status, utc_now(), decided_by, decision_note, approval_id),
-        )
-    return {"approval_id": approval_id, "status": status, "decided_by": decided_by, "decision_note": decision_note}
-
-
-def query_rows(table: str, limit: int = 50):
-    with db() as conn:
-        rows = conn.execute(f"SELECT * FROM {table} ORDER BY created_at DESC LIMIT ?", (max(1, min(limit, 200)),)).fetchall()
-    return [dict(row) for row in rows]
-
-
-def metrics() -> Dict[str, Any]:
-    with db() as conn:
-        total = conn.execute("SELECT COUNT(*) c FROM llm_runs").fetchone()["c"]
-        success = conn.execute("SELECT COUNT(*) c FROM llm_runs WHERE status='success'").fetchone()["c"]
-        failed = conn.execute("SELECT COUNT(*) c FROM llm_runs WHERE status='failed'").fetchone()["c"]
-        fallback = conn.execute("SELECT COUNT(*) c FROM llm_runs WHERE fallback_used=1").fetchone()["c"]
-        avg_latency = conn.execute("SELECT AVG(latency_ms) v FROM llm_runs").fetchone()["v"]
-        total_tokens = conn.execute("SELECT SUM(total_tokens) v FROM llm_runs").fetchone()["v"] or 0
-        cost = conn.execute("SELECT SUM(estimated_cost_usd) v FROM llm_runs").fetchone()["v"]
-        pending = conn.execute("SELECT COUNT(*) c FROM approvals WHERE status='pending'").fetchone()["c"]
-        eval_total = conn.execute("SELECT COUNT(*) c FROM evaluation_runs").fetchone()["c"]
-        eval_passed = conn.execute("SELECT SUM(passed) c FROM evaluation_runs").fetchone()["c"] or 0
-        eval_cases = conn.execute("SELECT SUM(total) c FROM evaluation_runs").fetchone()["c"] or 0
-        audit_count = conn.execute("SELECT COUNT(*) c FROM audit_events").fetchone()["c"]
-    return {
-        "llm_runs": total,
-        "llm_success": success,
-        "llm_failed": failed,
-        "fallback_runs": fallback,
-        "fallback_rate_pct": round((fallback / total) * 100, 2) if total else 0.0,
-        "avg_latency_ms": round(avg_latency, 2) if avg_latency is not None else 0.0,
-        "total_tokens": int(total_tokens),
-        "estimated_cost_usd": round(cost, 6) if cost is not None else None,
-        "pending_approvals": pending,
-        "audit_events": audit_count,
-        "evaluation_runs": eval_total,
-        "evaluation_pass_rate_pct": round((eval_passed / eval_cases) * 100, 2) if eval_cases else 0.0,
-    }
-
-
-# ---------------------------------------------------------------------------
-# MLOps-lite registry and experiment tracking
-# ---------------------------------------------------------------------------
-
-
-def insert_model(*, name: str, provider: str, version: str, status: str = "candidate",
-                 eval_score: float | None = None, eval_dataset_version: str | None = None,
-                 config_version: str = "v1", metadata: Any | None = None) -> dict[str, Any]:
-    with db() as conn:
-        row = conn.execute(
-            "SELECT * FROM model_registry WHERE name=? AND provider=? AND version=?",
-            (name, provider, version),
-        ).fetchone()
-        if row:
-            item = dict(row)
-            item["metadata"] = json.loads(item["metadata"] or "{}")
-            return item
-        model_id = str(uuid.uuid4())
-        conn.execute(
-            """INSERT INTO model_registry
-            (id, created_at, name, provider, version, status, eval_score, eval_dataset_version,
-             config_version, metadata, promoted_at, retired_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)""",
-            (model_id, utc_now(), name, provider, version, status, eval_score,
-             eval_dataset_version, config_version, json.dumps(metadata or {}, default=str)),
-        )
-        row = conn.execute("SELECT * FROM model_registry WHERE id=?", (model_id,)).fetchone()
-        item = dict(row)
-        item["metadata"] = json.loads(item["metadata"] or "{}")
-        return item
-
-
-def get_model(model_id: str) -> dict[str, Any] | None:
-    with db() as conn:
-        row = conn.execute("SELECT * FROM model_registry WHERE id=?", (model_id,)).fetchone()
-    if not row:
-        return None
-    item = dict(row)
-    item["metadata"] = json.loads(item["metadata"] or "{}")
-    return item
-
-
-def promote_model_record(model_id: str) -> dict[str, Any]:
-    with db() as conn:
-        selected = conn.execute("SELECT * FROM model_registry WHERE id=?", (model_id,)).fetchone()
-        if not selected:
-            raise KeyError("model not found")
-        now = utc_now()
-        conn.execute(
-            "UPDATE model_registry SET status='retired', retired_at=? WHERE name=? AND provider=? AND id<>? AND status='production'",
-            (now, selected["name"], selected["provider"], model_id),
-        )
-        conn.execute(
-            "UPDATE model_registry SET status='production', promoted_at=?, retired_at=NULL WHERE id=?",
-            (now, model_id),
-        )
-        row = conn.execute("SELECT * FROM model_registry WHERE id=?", (model_id,)).fetchone()
-    item = dict(row)
-    item["metadata"] = json.loads(item["metadata"] or "{}")
-    return item
-
-
-def query_models(limit: int = 100) -> list[dict[str, Any]]:
-    with db() as conn:
-        rows = conn.execute(
-            "SELECT * FROM model_registry ORDER BY created_at DESC LIMIT ?",
-            (max(1, min(limit, 500)),),
-        ).fetchall()
-    result = []
-    for row in rows:
-        item = dict(row)
-        item["metadata"] = json.loads(item["metadata"] or "{}")
-        result.append(item)
-    return result
-
-
-def ensure_dataset(*, name: str, version: str, content_hash: str, schema_hash: str,
-                    sample_count: int, metadata: Any | None = None) -> dict[str, Any]:
-    with db() as conn:
-        row = conn.execute(
-            "SELECT * FROM dataset_registry WHERE name=? AND version=?",
-            (name, version),
-        ).fetchone()
-        if row:
-            item = dict(row)
-            item["active"] = bool(item["active"])
-            item["metadata"] = json.loads(item["metadata"] or "{}")
-            return item
-        dataset_id = str(uuid.uuid4())
-        conn.execute(
-            """INSERT INTO dataset_registry
-            (id, created_at, name, version, content_hash, schema_hash, sample_count, metadata, active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)""",
-            (dataset_id, utc_now(), name, version, content_hash, schema_hash, int(sample_count),
-             json.dumps(metadata or {}, default=str)),
-        )
-        row = conn.execute("SELECT * FROM dataset_registry WHERE id=?", (dataset_id,)).fetchone()
-    item = dict(row)
-    item["active"] = bool(item["active"])
-    item["metadata"] = json.loads(item["metadata"] or "{}")
-    return item
-
-
-def query_datasets(limit: int = 200) -> list[dict[str, Any]]:
-    with db() as conn:
-        rows = conn.execute(
-            "SELECT * FROM dataset_registry ORDER BY name ASC, created_at DESC LIMIT ?",
-            (max(1, min(limit, 500)),),
-        ).fetchall()
-    result = []
-    for row in rows:
-        item = dict(row)
-        item["active"] = bool(item["active"])
-        item["metadata"] = json.loads(item["metadata"] or "{}")
-        result.append(item)
-    return result
-
-
-def insert_experiment_run(*, name: str, target: str, model_name: str | None,
-                          model_version: str | None, dataset_name: str | None,
-                          dataset_version: str | None, prompt_version: str,
-                          config_version: str, status: str, metrics: Any,
-                          parameters: Any, notes: str) -> str:
-    experiment_id = str(uuid.uuid4())
-    now = utc_now()
-    with db() as conn:
-        conn.execute(
-            """INSERT INTO experiment_runs
-            (id, created_at, name, target, model_name, model_version, dataset_name, dataset_version,
-             prompt_version, config_version, status, metrics, parameters, notes, started_at, completed_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)""",
-            (experiment_id, now, name, target, model_name, model_version, dataset_name, dataset_version,
-             prompt_version, config_version, status, json.dumps(metrics or {}, default=str),
-             json.dumps(parameters or {}, default=str), notes, now),
-        )
-    return experiment_id
-
-
-def update_experiment_run(experiment_id: str, *, status: str, metrics: Any,
-                          notes: str = "") -> None:
-    with db() as conn:
-        conn.execute(
-            "UPDATE experiment_runs SET status=?, metrics=?, notes=?, completed_at=? WHERE id=?",
-            (status, json.dumps(metrics or {}, default=str), notes, utc_now(), experiment_id),
-        )
-
-
-def query_experiments_runs(limit: int = 100) -> list[dict[str, Any]]:
-    with db() as conn:
-        rows = conn.execute(
-            "SELECT * FROM experiment_runs ORDER BY created_at DESC LIMIT ?",
-            (max(1, min(limit, 500)),),
-        ).fetchall()
-    result = []
-    for row in rows:
-        item = dict(row)
-        item["metrics"] = json.loads(item["metrics"] or "{}")
-        item["parameters"] = json.loads(item["parameters"] or "{}")
-        result.append(item)
-    return result
