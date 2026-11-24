@@ -35,3 +35,5 @@ QUOTESENSE_BASE_URL = os.getenv("QUOTESENSE_BASE_URL", "").strip().rstrip("/")
 WEBQA_BASE_URL = os.getenv("WEBQA_BASE_URL", "").strip().rstrip("/")
 
 EXTRA_TARGETS_JSON = os.getenv("EXTRA_TARGETS_JSON", "").strip()
+
+HARNESS_INGEST_TOKENS_JSON = os.getenv("HARNESS_INGEST_TOKENS_JSON", "").strip()
