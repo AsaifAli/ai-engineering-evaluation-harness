@@ -8,9 +8,9 @@ from .config import HUB_API_KEY
 
 
 def require_hub_api_key(authorization: str | None = Header(default=None)) -> None:
-    """Require a bearer token when HUB_API_KEY is configured.
+    """Require an operator bearer token for replay-evaluation writes.
 
-    Local development stays frictionless when the variable is unset. Set HUB_API_KEY on the hosted service to restrict replay-evaluation writes to an operator.
+    If no operator key is configured, writes are disabled with HTTP 503.
     """
     if not HUB_API_KEY:
         raise HTTPException(status_code=503, detail="operator replay key is not configured")
