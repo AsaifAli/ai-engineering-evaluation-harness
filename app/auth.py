@@ -10,8 +10,7 @@ from .config import HUB_API_KEY
 def require_hub_api_key(authorization: str | None = Header(default=None)) -> None:
     """Require a bearer token when HUB_API_KEY is configured.
 
-    Local development stays frictionless when the variable is unset. Render should
-    set HUB_API_KEY so n8n and other automation clients authenticate explicitly.
+    Local development stays frictionless when the variable is unset. Set HUB_API_KEY on the hosted service to restrict replay-evaluation writes to an operator.
     """
     if not HUB_API_KEY:
         return
