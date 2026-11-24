@@ -239,3 +239,12 @@ An optional local `customer-rag` service is included to demonstrate the generic 
 ## Advanced evaluation capabilities
 
 The harness includes experiment comparison, normalized agent trace persistence, prompt/model/config lineage, a replay regression CI gate, and an optional shared-gateway LLM-as-a-judge. These extensions remain decoupled from project adapters and reusable evaluation packs.
+
+## Website-linked dashboard mode
+
+This repository is presented as the AI Engineering Studio's engineering evaluation dashboard, not as another customer-facing product application.
+
+The existing FastAPI service and `app/dashboard.html` remain the canonical UI. The website links to the separately deployed dashboard; it does not proxy privileged harness routes or collect provider keys. Read-only monitoring is intended for dashboard viewers. Mutating operations (live target runs, experiments, approvals, configuration, model promotion, and integration actions) remain protected by `HUB_API_KEY` and should be available only to an operator deployment.
+
+For website linking, configure the hosted dashboard URL in the website environment as `EVALUATION_HARNESS_DASHBOARD_URL`. Configure the API origin as `EVALUATION_HARNESS_API_URL` only when the website needs to show a non-sensitive configured-state note. Do not expose `HUB_API_KEY`, gateway JWTs, target credentials, or provider keys to the browser.
+
