@@ -1,26 +1,28 @@
-# Observability
+# Application telemetry
 
-The harness records a structured event for every captured AI execution:
+The dashboard separates two types of evidence:
 
-- workflow and operation
-- provider and model
-- prompt version
-- wall-clock latency
-- success/failure status
-- fallback usage
-- token usage when exposed by the gateway
-- estimated cost when model pricing is configured
-- guardrail state
-- error detail
+- **Replay evaluation**: deterministic fixture scores for retrieval/citation and document-extraction/business-rule quality.
+- **Application activity**: run completion/failure metadata reported by EvidenceFlow and QuoteSense.
 
-For project-level evaluation it also stores:
+This separation is intentional. Synthetic replay checks should never be described as live model performance.
 
-- target project
-- evaluation batch and case id
-- replay/live mode
-- overall quality score
-- metric vector
-- gate failures
-- evaluation notes
+## Accepted event fields
 
-This separation matters: operational telemetry answers **"did the system run reliably?"**, while quality evaluation answers **"did the AI behavior meet task-specific expectations?"**.
+- `project`: `evidenceflow` or `quotesense`.
+- `event_type` and `status`.
+- `workflow`: short workflow identifier.
+- `duration_ms`: optional bounded duration.
+- `model`: optional non-secret model label.
+- `request_id`: optional correlation identifier.
+- `metrics`: up to 24 numeric/boolean values with short identifier names.
+
+Event IDs are idempotent, allowing a sender to retry without duplicating the same event.
+
+## Explicitly excluded
+
+Do not send prompts, user questions, answers, conversation transcripts, uploaded files, document text, extracted quotation values, supplier/customer names, source excerpts, provider keys, Gateway tokens or stack traces. The API rejects additional payload fields and non-numeric metric values.
+
+## Failure behavior
+
+The two app clients are best-effort: they use a short request timeout, swallow telemetry transport failures and do not interrupt the original application operation. Missing URL/token configuration disables reporting without disabling EvidenceFlow or QuoteSense.
