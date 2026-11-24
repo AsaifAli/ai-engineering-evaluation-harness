@@ -106,6 +106,11 @@ def _existing_ai_quality_columns(conn) -> set[str]:
 
 
 def init_db() -> None:
+    """Create only the event/evaluation tables required by the lean service.
+
+    Existing legacy tables are intentionally not dropped or rewritten, so an
+    existing hosted database keeps its historical data during this trim.
+    """
     with db() as conn:
         conn.execute("""CREATE TABLE IF NOT EXISTS audit_events (
             id TEXT PRIMARY KEY,
@@ -128,49 +133,10 @@ def init_db() -> None:
             request_id TEXT,
             metrics TEXT NOT NULL
         )""")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_application_events_project_created ON application_events(project, created_at)")
-        conn.execute("""CREATE TABLE IF NOT EXISTS approvals (
-            id TEXT PRIMARY KEY,
-            created_at TEXT NOT NULL,
-            status TEXT NOT NULL,
-            workflow TEXT NOT NULL,
-            summary TEXT NOT NULL,
-            payload TEXT NOT NULL,
-            decided_at TEXT,
-            decided_by TEXT,
-            decision_note TEXT
-        )""")
-        conn.execute("""CREATE TABLE IF NOT EXISTS llm_runs (
-            id TEXT PRIMARY KEY,
-            created_at TEXT NOT NULL,
-            run_id TEXT NOT NULL,
-            workflow TEXT NOT NULL,
-            operation TEXT NOT NULL,
-            provider TEXT NOT NULL,
-            model TEXT NOT NULL,
-            prompt_version TEXT NOT NULL,
-            latency_ms REAL NOT NULL,
-            status TEXT NOT NULL,
-            fallback_used INTEGER NOT NULL DEFAULT 0,
-            input_tokens INTEGER,
-            output_tokens INTEGER,
-            total_tokens INTEGER,
-            estimated_cost_usd REAL,
-            guardrail_status TEXT NOT NULL,
-            error TEXT
-        )""")
-        conn.execute("""CREATE TABLE IF NOT EXISTS evaluation_runs (
-            id TEXT PRIMARY KEY,
-            created_at TEXT NOT NULL,
-            eval_suite TEXT NOT NULL,
-            workflow TEXT NOT NULL,
-            provider TEXT NOT NULL,
-            model TEXT NOT NULL,
-            passed INTEGER NOT NULL,
-            total INTEGER NOT NULL,
-            score REAL NOT NULL,
-            details TEXT NOT NULL
-        )""")
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_application_events_project_created "
+            "ON application_events(project, created_at)"
+        )
         conn.execute("""CREATE TABLE IF NOT EXISTS ai_quality_runs (
             id TEXT PRIMARY KEY,
             created_at TEXT NOT NULL,
@@ -201,43 +167,7 @@ def init_db() -> None:
         for column, statement in migrations.items():
             if column not in columns:
                 conn.execute(statement)
-        conn.execute("""CREATE TABLE IF NOT EXISTS traces (
-            id TEXT PRIMARY KEY, created_at TEXT NOT NULL, run_id TEXT NOT NULL, target TEXT, workflow TEXT NOT NULL,
-            status TEXT NOT NULL, duration_ms REAL NOT NULL, steps TEXT NOT NULL, metadata TEXT NOT NULL
-        )""")
-        conn.execute("""CREATE TABLE IF NOT EXISTS config_registry (
-            id TEXT PRIMARY KEY, created_at TEXT NOT NULL, component TEXT NOT NULL, version TEXT NOT NULL,
-            config TEXT NOT NULL, notes TEXT, active INTEGER NOT NULL DEFAULT 1
-        )""")
-        conn.execute("""CREATE TABLE IF NOT EXISTS experiment_comparisons (
-            id TEXT PRIMARY KEY, created_at TEXT NOT NULL, experiment_id TEXT NOT NULL, target TEXT NOT NULL,
-            baseline_batch_id TEXT NOT NULL, candidate_batch_id TEXT NOT NULL, status TEXT NOT NULL, passed INTEGER NOT NULL,
-            score_delta REAL NOT NULL, metrics TEXT NOT NULL, regressions TEXT NOT NULL, improvements TEXT NOT NULL
-        )""")
-        conn.execute("""CREATE TABLE IF NOT EXISTS judge_runs (
-            id TEXT PRIMARY KEY, created_at TEXT NOT NULL, target TEXT NOT NULL, case_id TEXT NOT NULL,
-            quality_id TEXT, status TEXT NOT NULL, provider TEXT, model TEXT, prompt_version TEXT NOT NULL,
-            score REAL, criteria TEXT NOT NULL, rationale TEXT NOT NULL, metadata TEXT NOT NULL
-        )""")
-        conn.execute("""CREATE TABLE IF NOT EXISTS model_registry (
-            id TEXT PRIMARY KEY, created_at TEXT NOT NULL, name TEXT NOT NULL, provider TEXT NOT NULL,
-            version TEXT NOT NULL, status TEXT NOT NULL, eval_score REAL, eval_dataset_version TEXT,
-            config_version TEXT NOT NULL, metadata TEXT NOT NULL, promoted_at TEXT, retired_at TEXT
-        )""")
-        conn.execute("""CREATE TABLE IF NOT EXISTS dataset_registry (
-            id TEXT PRIMARY KEY, created_at TEXT NOT NULL, name TEXT NOT NULL, version TEXT NOT NULL,
-            content_hash TEXT NOT NULL, schema_hash TEXT NOT NULL, sample_count INTEGER NOT NULL,
-            metadata TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1
-        )""")
-        conn.execute("""CREATE TABLE IF NOT EXISTS experiment_runs (
-            id TEXT PRIMARY KEY, created_at TEXT NOT NULL, name TEXT NOT NULL, target TEXT NOT NULL,
-            model_name TEXT, model_version TEXT, dataset_name TEXT, dataset_version TEXT,
-            prompt_version TEXT NOT NULL, config_version TEXT NOT NULL, status TEXT NOT NULL,
-            metrics TEXT NOT NULL, parameters TEXT NOT NULL, notes TEXT NOT NULL,
-            started_at TEXT NOT NULL, completed_at TEXT
-        )""")
-        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_model_registry_identity ON model_registry(name, provider, version)")
-        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_dataset_registry_identity ON dataset_registry(name, version)")
+
 
 
 def insert_application_event(*, event_id: str, project: str, event_type: str, status: str,
