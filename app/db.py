@@ -116,6 +116,19 @@ def init_db() -> None:
             run_id TEXT,
             payload TEXT NOT NULL
         )""")
+        conn.execute("""CREATE TABLE IF NOT EXISTS application_events (
+            id TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL,
+            project TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            status TEXT NOT NULL,
+            workflow TEXT NOT NULL,
+            duration_ms REAL,
+            model TEXT,
+            request_id TEXT,
+            metrics TEXT NOT NULL
+        )""")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_application_events_project_created ON application_events(project, created_at)")
         conn.execute("""CREATE TABLE IF NOT EXISTS approvals (
             id TEXT PRIMARY KEY,
             created_at TEXT NOT NULL,
@@ -225,6 +238,43 @@ def init_db() -> None:
         )""")
         conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_model_registry_identity ON model_registry(name, provider, version)")
         conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_dataset_registry_identity ON dataset_registry(name, version)")
+
+
+def insert_application_event(*, event_id: str, project: str, event_type: str, status: str,
+                            workflow: str, duration_ms: float | None, model: str | None,
+                            request_id: str | None, metrics: Any) -> bool:
+    """Persist a bounded project event. Event IDs make retries idempotent."""
+    with db() as conn:
+        cursor = conn.execute(
+            """INSERT INTO application_events
+            (id, created_at, project, event_type, status, workflow, duration_ms, model, request_id, metrics)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO NOTHING""",
+            (event_id, utc_now(), project, event_type, status, workflow, duration_ms,
+             model, request_id, json.dumps(metrics or {}, allow_nan=False)),
+        )
+        return getattr(cursor, "rowcount", 0) == 1
+
+
+def query_application_events(limit: int = 60, project: str | None = None) -> list[dict[str, Any]]:
+    bounded_limit = max(1, min(int(limit), 1000))
+    with db() as conn:
+        if project:
+            rows = conn.execute(
+                "SELECT * FROM application_events WHERE project=? ORDER BY created_at DESC LIMIT ?",
+                (project, bounded_limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM application_events ORDER BY created_at DESC LIMIT ?",
+                (bounded_limit,),
+            ).fetchall()
+    result = []
+    for row in rows:
+        item = dict(row)
+        item["metrics"] = json.loads(item.get("metrics") or "{}")
+        result.append(item)
+    return result
 
 
 def insert_audit(event_type: str, status: str, payload: Dict[str, Any], actor: str = "system", run_id: Optional[str] = None) -> str:
