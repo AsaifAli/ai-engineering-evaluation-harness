@@ -1,59 +1,14 @@
 services:
-  api:
+  evaluation:
     build: .
     ports:
       - "8000:8000"
     environment:
-      AUDIT_DB: /app/data/audit.db
+      AUDIT_DB: /app/data/evaluation.db
       DATABASE_URL: ${DATABASE_URL:-}
       DB_SCHEMA: ${DB_SCHEMA:-harness}
-      LLM_PROVIDER: ${LLM_PROVIDER:-deterministic}
-      GATEWAY_BASE_URL: ${GATEWAY_BASE_URL:-https://portfolio-llm-gateway.onrender.com}
-      GATEWAY_SESSION_TOKEN: ${GATEWAY_SESSION_TOKEN:-}
-      GATEWAY_MODEL: ${GATEWAY_MODEL:-}
-      GATEWAY_PROVIDER: ${GATEWAY_PROVIDER:-gateway}
-      GATEWAY_TIMEOUT: ${GATEWAY_TIMEOUT:-45}
-      COMMAND_CENTER_BASE_URL: ${COMMAND_CENTER_BASE_URL:-}
-      COMMAND_CENTER_API_KEY: ${COMMAND_CENTER_API_KEY:-}
-      COMMAND_CENTER_LLM_GATEWAY_TOKEN: ${COMMAND_CENTER_LLM_GATEWAY_TOKEN:-}
-      COMMAND_CENTER_TIMEOUT: ${COMMAND_CENTER_TIMEOUT:-90}
-      LEGACY_LENS_BASE_URL: ${LEGACY_LENS_BASE_URL:-}
-      LEGACY_LENS_AUTHORIZATION: ${LEGACY_LENS_AUTHORIZATION:-}
-      LEGACY_LENS_GATEWAY_TOKEN: ${LEGACY_LENS_GATEWAY_TOKEN:-}
-      LEGACY_LENS_TIMEOUT: ${LEGACY_LENS_TIMEOUT:-120}
-      EVIDENCEFLOW_BASE_URL: ${EVIDENCEFLOW_BASE_URL:-}
-      QUOTESENSE_BASE_URL: ${QUOTESENSE_BASE_URL:-}
-      WEBQA_BASE_URL: ${WEBQA_BASE_URL:-}
-      EXTRA_TARGETS_JSON: ${EXTRA_TARGETS_JSON:-}
-      GATEWAY_MAX_RETRIES: ${GATEWAY_MAX_RETRIES:-2}
-      CIRCUIT_FAILURE_THRESHOLD: ${CIRCUIT_FAILURE_THRESHOLD:-3}
-      CIRCUIT_RECOVERY_SECONDS: ${CIRCUIT_RECOVERY_SECONDS:-30}
-      MAX_INPUT_CHARS: ${MAX_INPUT_CHARS:-12000}
-      MIN_CONFIDENCE_FOR_ACTION: ${MIN_CONFIDENCE_FOR_ACTION:-0.70}
-      MODEL_PRICING_JSON: ${MODEL_PRICING_JSON:-{}}
       HUB_API_KEY: ${HUB_API_KEY:-}
+      HARNESS_INGEST_TOKENS_JSON: ${HARNESS_INGEST_TOKENS_JSON:-}
     volumes:
       - ./data:/app/data
     restart: unless-stopped
-
-  n8n:
-    image: n8nio/n8n:latest
-    ports:
-      - "5678:5678"
-    environment:
-      N8N_SECURE_COOKIE: "false"
-      N8N_HOST: localhost
-      N8N_PORT: 5678
-      WEBHOOK_URL: http://localhost:5678/
-      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
-      N8N_BASIC_AUTH_ACTIVE: "true"
-      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-admin}
-      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-change-me}
-    volumes:
-      - n8n_data:/home/node/.n8n
-    depends_on:
-      - api
-    restart: unless-stopped
-
-volumes:
-  n8n_data:
