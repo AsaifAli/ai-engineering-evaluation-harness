@@ -223,7 +223,7 @@ function renderFleetSmoke(auditRows){
  const cards=targets.map(t=>{
    const ok=['completed','completed_with_warnings','success','live_adapter_ready'].includes(t.status);
    const kind=ok?'good':t.status==='pending'?'warn':'bad';
-   const name={flowpilot:'FlowPilot',legacylens:'LegacyLens',evidenceflow:'EvidenceFlow',quotesense:'QuoteSense',webqa:'WebQA'}[t.target]||t.target||'Target';
+   const name={flowpilot:'FlowPilot',evidenceflow:'EvidenceFlow',quotesense:'QuoteSense'}[t.target]||'Engineering reference';
    const detail=t.mode?String(t.mode):t.integration_mode?String(t.integration_mode):'';
    const extra=t.error?String(t.error):detail;
    return `<div class="fleet-card ${kind}"><div class="target-name">${esc(name)}</div><div class="fleet-state"><span class="dot"></span>${esc(ok?'healthy':t.status||'unknown')}</div><div class="target-url">${esc(extra)}</div></div>`;
@@ -365,7 +365,7 @@ $('runQuality').addEventListener('click',async()=>{
     }
   }finally{
     $('runQuality').disabled=false;
-    $('runQuality').textContent='Run five-project replay eval';
+    $('runQuality').textContent='Run replay evaluation';
     refresh();
   }
 });
