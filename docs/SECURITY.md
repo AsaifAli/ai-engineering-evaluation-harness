@@ -15,7 +15,7 @@ This service is intentionally a public, read-only engineering assurance dashboar
 - Render blueprint keeps ingestion and operator secrets as unsynced deployment environment values.
 
 ## Required hardening
-1. Add API-level request-size limits and IP-based rate limiting to telemetry intake and replay triggers. The harness currently validates field sizes/counts but does not demonstrate edge-level throttling.
+1. Application-level IP throttling now covers both write routes; authenticated operator and project ingest credentials have separate quotas (`app/rate_limit.py`, `app/auth.py`). Add shared ingress/WAF quotas for multi-instance deployments because the in-process limiter does not coordinate replicas.
 2. Make `/ready` errors generic to avoid reflecting database exception details to unauthenticated callers.
 3. Confirm the dashboard HTML uses safe DOM text APIs and never injects dynamic API values with `innerHTML`.
 4. Configure HTTPS-only service access and enable MFA on GitHub/hosting/database administration accounts.
@@ -31,7 +31,7 @@ This service is intentionally a public, read-only engineering assurance dashboar
 |04|File upload|N/A — no upload endpoint|
 |05|SSRF|N/A — no user-controlled fetch endpoint identified|
 |06|BOLA/IDOR|N/A — no user-owned objects; public telemetry is intentional|
-|07|Rate limiting|PARTIAL — auth separates writers; distributed/IP throttling still required|
+|07|Rate limiting|PARTIAL — IP + authenticated operator/project-token quotas are implemented in-process; distributed ingress quotas remain required when scaled|
 |08|Password hashing|N/A — no password accounts|
 |09|MFA|EXTERNAL — enable for hosting/source-control/database administration|
 |10|Server permissions|PASS for writes — operator key and project-scoped ingestion tokens in `app/auth.py`|

@@ -90,3 +90,73 @@ def test_ingest_rejects_content_fields_and_invalid_metrics(monkeypatch):
             json=payload,
         )
         assert response.status_code == 422
+
+
+def test_replay_endpoint_is_rate_limited_per_operator_key(monkeypatch):
+    from app import main
+    from app.rate_limit import rate_limiter
+
+    monkeypatch.setattr(auth, "HUB_API_KEY", "operator-secret")
+    monkeypatch.setattr(config, "HUB_RATE_LIMIT_PER_MINUTE", 1)
+    monkeypatch.setattr(config, "HUB_IP_RATE_LIMIT_PER_MINUTE", 20)
+    monkeypatch.setattr(main, "run_all", lambda mode: {"mode": mode})
+    rate_limiter.clear()
+
+    with TestClient(app) as client:
+        headers = {"Authorization": "Bearer operator-secret"}
+        first = client.post("/api/ai-quality/run?target=all", headers=headers)
+        second = client.post("/api/ai-quality/run?target=all", headers=headers)
+
+    assert first.status_code == 200
+    assert second.status_code == 429
+    assert second.headers["retry-after"]
+
+
+def test_project_ingest_is_rate_limited_per_project_token(monkeypatch):
+    from app import main
+    from app.rate_limit import rate_limiter
+
+    monkeypatch.setattr(
+        config,
+        "HARNESS_INGEST_TOKENS_JSON",
+        '{"evidenceflow":"evidence-token"}',
+    )
+    monkeypatch.setattr(config, "PROJECT_INGEST_RATE_LIMIT_PER_MINUTE", 1)
+    monkeypatch.setattr(config, "HUB_IP_RATE_LIMIT_PER_MINUTE", 20)
+    monkeypatch.setattr(main, "insert_application_event", lambda **kwargs: True)
+    rate_limiter.clear()
+
+    payload = {
+        "event_id": "ef-" + "c" * 32,
+        "project": "evidenceflow",
+        "event_type": "run.completed",
+        "status": "success",
+        "workflow": "rag_query",
+        "metrics": {"retrieved_chunks": 1},
+    }
+    with TestClient(app) as client:
+        headers = {"Authorization": "Bearer evidence-token"}
+        first = client.post("/api/application-events", headers=headers, json=payload)
+        second = client.post("/api/application-events", headers=headers, json={
+            **payload, "event_id": "ef-" + "d" * 32
+        })
+
+    assert first.status_code == 202
+    assert second.status_code == 429
+    assert second.headers["retry-after"]
+
+
+def test_write_routes_rate_limit_invalid_auth_by_client_ip(monkeypatch):
+    from app.rate_limit import rate_limiter
+
+    monkeypatch.setattr(auth, "HUB_API_KEY", "operator-secret")
+    monkeypatch.setattr(config, "HUB_IP_RATE_LIMIT_PER_MINUTE", 1)
+    rate_limiter.clear()
+
+    with TestClient(app) as client:
+        first = client.post("/api/ai-quality/run?target=all")
+        second = client.post("/api/ai-quality/run?target=all")
+
+    assert first.status_code == 401
+    assert second.status_code == 429
+    assert second.headers["retry-after"]
