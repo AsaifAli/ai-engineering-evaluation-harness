@@ -6,7 +6,7 @@ import secrets
 from fastapi import Header, HTTPException
 
 from .config import HUB_API_KEY
-from .rate_limit import rate_limiter
+from .rate_limit import RateLimitBackendUnavailable, rate_limiter
 
 
 def require_hub_api_key(authorization: str | None = Header(default=None)) -> None:
@@ -25,10 +25,17 @@ def require_hub_api_key(authorization: str | None = Header(default=None)) -> Non
     from . import config
 
     fingerprint = hashlib.sha256(token.encode("utf-8")).hexdigest()
-    allowed, retry_after = rate_limiter.check(
-        f"hub-token:{fingerprint}",
-        limit=config.HUB_RATE_LIMIT_PER_MINUTE,
-    )
+    try:
+        allowed, retry_after = rate_limiter.check(
+            f"hub-token:{fingerprint}",
+            limit=config.HUB_RATE_LIMIT_PER_MINUTE,
+        )
+    except RateLimitBackendUnavailable:
+        raise HTTPException(
+            status_code=503,
+            detail="Write API is temporarily unavailable.",
+            headers={"Retry-After": "5"},
+        ) from None
     if not allowed:
         raise HTTPException(
             status_code=429,
@@ -64,10 +71,17 @@ def require_project_ingest_token(project: str, authorization: str | None) -> Non
     fingerprint = hashlib.sha256(
         f"{project}:{supplied}".encode("utf-8")
     ).hexdigest()
-    allowed, retry_after = rate_limiter.check(
-        f"project-token:{fingerprint}",
-        limit=config.PROJECT_INGEST_RATE_LIMIT_PER_MINUTE,
-    )
+    try:
+        allowed, retry_after = rate_limiter.check(
+            f"project-token:{fingerprint}",
+            limit=config.PROJECT_INGEST_RATE_LIMIT_PER_MINUTE,
+        )
+    except RateLimitBackendUnavailable:
+        raise HTTPException(
+            status_code=503,
+            detail="Write API is temporarily unavailable.",
+            headers={"Retry-After": "5"},
+        ) from None
     if not allowed:
         raise HTTPException(
             status_code=429,

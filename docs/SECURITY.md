@@ -16,7 +16,7 @@ This service is intentionally a public, read-only engineering assurance dashboar
 - Render blueprint keeps ingestion and operator secrets as unsynced deployment environment values.
 
 ## Required hardening
-1. Application-level IP throttling now covers both write routes; authenticated operator and project ingest credentials have separate quotas (`app/rate_limit.py`, `app/auth.py`). Add shared ingress/WAF quotas for multi-instance deployments because the in-process limiter does not coordinate replicas.
+1. Application-level IP throttling covers both write routes; authenticated operator and project ingest credentials have separate quotas. Production counters use Upstash REST Lua `EVAL` and a `harness:ratelimit:v1:` namespace; development remains in-process. Production writes fail closed with 503 if Upstash is missing or unavailable (`app/rate_limit.py`, `app/auth.py`). Add ingress/WAF quotas as a second perimeter layer.
 2. **PATCHED in main:** `/ready` returns a generic 503 body and logs only the exception class; database connection details are not reflected to unauthenticated callers.
 3. Confirm the dashboard HTML uses safe DOM text APIs and never injects dynamic API values with `innerHTML`.
 4. Configure HTTPS-only service access and enable MFA on GitHub/hosting/database administration accounts.
@@ -32,7 +32,7 @@ This service is intentionally a public, read-only engineering assurance dashboar
 |04|File upload|N/A — no upload endpoint|
 |05|SSRF|N/A — no user-controlled fetch endpoint identified|
 |06|BOLA/IDOR|N/A — no user-owned objects; public telemetry is intentional|
-|07|Rate limiting|PARTIAL — IP + authenticated operator/project-token quotas are implemented in-process; distributed ingress quotas remain required when scaled|
+|07|Rate limiting|PARTIAL — IP + operator/project-token counters are shared through Upstash in production; add ingress/WAF limits as a second layer|
 |08|Password hashing|N/A — no password accounts|
 |09|MFA|EXTERNAL — enable for hosting/source-control/database administration|
 |10|Server permissions|PASS for writes — operator key and project-scoped ingestion tokens in `app/auth.py`|

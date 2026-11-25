@@ -6,6 +6,12 @@ services:
     plan: free
     healthCheckPath: /health
     envVars:
+      - key: APP_ENV
+        value: production
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
       - key: DATABASE_URL
         sync: false
       - key: DB_SCHEMA
