@@ -6,6 +6,7 @@ from typing import Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
+from . import config
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .auth import require_hub_api_key, require_project_ingest_token
