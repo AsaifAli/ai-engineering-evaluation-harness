@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from pathlib import Path
 from typing import Literal
@@ -13,6 +14,8 @@ from .auth import require_hub_api_key, require_project_ingest_token
 from .rate_limit import rate_limiter
 from .db import init_db, insert_application_event, query_application_events, quality_metrics
 from evals.project_runner import TARGETS, run_all, run_target
+
+logger = logging.getLogger(__name__)
 
 init_db()
 
@@ -99,7 +102,11 @@ def ready():
             conn.execute("SELECT 1").fetchone()
         return {"status": "ready", "database": "ok"}
     except Exception as exc:
-        raise HTTPException(503, f"not ready: {exc}") from exc
+        # Readiness is a public probe. Log only the failure class; connection
+        # strings and driver exception messages may contain internal hostnames
+        # or credentials and must not be reflected to unauthenticated callers.
+        logger.error("readiness_check_failed error_type=%s", type(exc).__name__)
+        raise HTTPException(503, "not ready") from None
 
 
 @app.get("/api/ai-quality")
