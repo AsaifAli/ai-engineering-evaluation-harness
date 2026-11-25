@@ -31,7 +31,7 @@ This service is intentionally a public, read-only engineering assurance dashboar
 |04|File upload|N/A — no upload endpoint|
 |05|SSRF|N/A — no user-controlled fetch endpoint identified|
 |06|BOLA/IDOR|N/A — no user-owned objects; public telemetry is intentional|
-|07|Rate limiting|PARTIAL — auth separates writers; distributed/IP throttling still required|
+|07|Rate limiting|PARTIAL — IP + authenticated operator/project-token quotas are implemented in-process; distributed ingress quotas remain required when scaled|
 |08|Password hashing|N/A — no password accounts|
 |09|MFA|EXTERNAL — enable for hosting/source-control/database administration|
 |10|Server permissions|PASS for writes — operator key and project-scoped ingestion tokens in `app/auth.py`|
