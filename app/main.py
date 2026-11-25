@@ -11,7 +11,7 @@ from . import config
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .auth import require_hub_api_key, require_project_ingest_token
-from .rate_limit import rate_limiter
+from .rate_limit import RateLimitBackendUnavailable, rate_limiter
 from .db import init_db, insert_application_event, query_application_events, quality_metrics
 from evals.project_runner import TARGETS, run_all, run_target
 
@@ -71,10 +71,18 @@ _WRITE_PATHS = {"/api/ai-quality/run", "/api/application-events"}
 async def write_api_ip_rate_limit(request: Request, call_next):
     if request.method == "POST" and request.url.path in _WRITE_PATHS:
         client_ip = request.client.host if request.client is not None else "unknown"
-        allowed, retry_after = rate_limiter.check(
-            f"write-ip:{client_ip}",
-            limit=config.HUB_IP_RATE_LIMIT_PER_MINUTE,
-        )
+        try:
+            allowed, retry_after = rate_limiter.check(
+                f"write-ip:{client_ip}",
+                limit=config.HUB_IP_RATE_LIMIT_PER_MINUTE,
+            )
+        except RateLimitBackendUnavailable:
+            logger.error("write_rate_limit_backend_unavailable")
+            return JSONResponse(
+                status_code=503,
+                content={"detail": "Write API is temporarily unavailable."},
+                headers={"Retry-After": "5"},
+            )
         if not allowed:
             return JSONResponse(
                 status_code=429,
