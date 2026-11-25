@@ -4,11 +4,12 @@ import uuid
 from pathlib import Path
 from typing import Literal
 
-from fastapi import Depends, FastAPI, Header, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .auth import require_hub_api_key, require_project_ingest_token
+from .rate_limit import rate_limiter
 from .db import init_db, insert_application_event, query_application_events, quality_metrics
 from evals.project_runner import TARGETS, run_all, run_target
 
@@ -57,6 +58,26 @@ app = FastAPI(
         "Only bounded application metadata is accepted; no user content or provider credentials."
     ),
 )
+
+
+_WRITE_PATHS = {"/api/ai-quality/run", "/api/application-events"}
+
+
+@app.middleware("http")
+async def write_api_ip_rate_limit(request: Request, call_next):
+    if request.method == "POST" and request.url.path in _WRITE_PATHS:
+        client_ip = request.client.host if request.client is not None else "unknown"
+        allowed, retry_after = rate_limiter.check(
+            f"write-ip:{client_ip}",
+            limit=config.HUB_IP_RATE_LIMIT_PER_MINUTE,
+        )
+        if not allowed:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Write API rate limit reached. Retry later."},
+                headers={"Retry-After": str(retry_after)},
+            )
+    return await call_next(request)
 
 
 @app.get("/health")
