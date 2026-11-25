@@ -5,6 +5,7 @@ This service is intentionally a public, read-only engineering assurance dashboar
 ## Findings and controls
 - SQL uses parameter placeholders in `app/db.py`; schema identifiers are regex-validated before interpolation. PASS for observed SQL construction.
 - No user-upload or user-supplied HTML surface is present in the API. Dashboard renders a checked-in HTML file; review any future dynamic rendering for escaping.
+- The runtime Docker image creates an `appuser` and runs Uvicorn without root privileges; the `/app` data directory remains writable for SQLite.
 - CSRF is not applicable to current bearer-header APIs because no cookie-authenticated browser session exists.
 - Upload validation is N/A: no upload route.
 - SSRF is N/A in the service API; no user-controlled outbound fetch route identified.
@@ -16,7 +17,7 @@ This service is intentionally a public, read-only engineering assurance dashboar
 
 ## Required hardening
 1. Application-level IP throttling now covers both write routes; authenticated operator and project ingest credentials have separate quotas (`app/rate_limit.py`, `app/auth.py`). Add shared ingress/WAF quotas for multi-instance deployments because the in-process limiter does not coordinate replicas.
-2. Make `/ready` errors generic to avoid reflecting database exception details to unauthenticated callers.
+2. **PATCHED in main:** `/ready` returns a generic 503 body and logs only the exception class; database connection details are not reflected to unauthenticated callers.
 3. Confirm the dashboard HTML uses safe DOM text APIs and never injects dynamic API values with `innerHTML`.
 4. Configure HTTPS-only service access and enable MFA on GitHub/hosting/database administration accounts.
 5. Scan the resolved Python dependency environment (including transitive dependencies) and update vulnerable packages after compatibility tests.
