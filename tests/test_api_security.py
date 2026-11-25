@@ -149,6 +149,7 @@ def test_project_ingest_is_rate_limited_per_project_token(monkeypatch):
 def test_write_routes_rate_limit_invalid_auth_by_client_ip(monkeypatch):
     from app.rate_limit import rate_limiter
 
+    monkeypatch.setattr(auth, "HUB_API_KEY", "operator-secret")
     monkeypatch.setattr(config, "HUB_IP_RATE_LIMIT_PER_MINUTE", 1)
     rate_limiter.clear()
 
