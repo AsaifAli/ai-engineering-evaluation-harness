@@ -67,6 +67,102 @@ app = FastAPI(
 _WRITE_PATHS = {"/api/ai-quality/run", "/api/application-events"}
 
 
+class RequestBodySizeLimitMiddleware:
+    """Enforce a small request body ceiling before JSON parsing."""
+
+    def __init__(self, app, *, max_bytes: int):
+        if max_bytes <= 0:
+            raise ValueError("max_bytes must be positive")
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def _send_error(self, send, status_code: int, message: str) -> None:
+        import json
+
+        body = json.dumps({"detail": message}).encode("utf-8")
+        await send({
+            "type": "http.response.start",
+            "status": status_code,
+            "headers": [
+                (b"content-type", b"application/json"),
+                (b"content-length", str(len(body)).encode("ascii")),
+            ],
+        })
+        await send({
+            "type": "http.response.body",
+            "body": body,
+            "more_body": False,
+        })
+
+    async def __call__(self, scope, receive, send):
+        if (
+            scope.get("type") != "http"
+            or scope.get("method") != "POST"
+            or scope.get("path") not in _WRITE_PATHS
+        ):
+            await self.app(scope, receive, send)
+            return
+
+        raw_headers = [
+            (key.lower(), value)
+            for key, value in scope.get("headers", [])
+        ]
+        content_lengths = [
+            value for key, value in raw_headers if key == b"content-length"
+        ]
+        if len(content_lengths) > 1:
+            await self._send_error(send, 400, "Ambiguous Content-Length header.")
+            return
+
+        content_length = content_lengths[0] if content_lengths else None
+        if content_length is not None:
+            try:
+                declared = int(content_length)
+            except (TypeError, ValueError):
+                await self._send_error(send, 400, "Invalid Content-Length header.")
+                return
+            if declared < 0:
+                await self._send_error(send, 400, "Invalid Content-Length header.")
+                return
+            if declared > self.max_bytes:
+                await self._send_error(send, 413, "Request body too large.")
+                return
+
+        received = 0
+        response_started = False
+
+        async def limited_receive():
+            nonlocal received
+            message = await receive()
+            if message.get("type") == "http.request":
+                received += len(message.get("body", b""))
+                if received > self.max_bytes:
+                    raise _RequestBodyTooLarge
+            return message
+
+        async def tracked_send(message):
+            nonlocal response_started
+            if message.get("type") == "http.response.start":
+                response_started = True
+            await send(message)
+
+        try:
+            await self.app(scope, limited_receive, tracked_send)
+        except _RequestBodyTooLarge:
+            if not response_started:
+                await self._send_error(send, 413, "Request body too large.")
+
+
+class _RequestBodyTooLarge(Exception):
+    pass
+
+
+app.add_middleware(
+    RequestBodySizeLimitMiddleware,
+    max_bytes=config.WRITE_REQUEST_MAX_BYTES,
+)
+
+
 @app.middleware("http")
 async def write_api_ip_rate_limit(request: Request, call_next):
     if request.method == "POST" and request.url.path in _WRITE_PATHS:
