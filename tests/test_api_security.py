@@ -160,3 +160,77 @@ def test_write_routes_rate_limit_invalid_auth_by_client_ip(monkeypatch):
     assert first.status_code == 401
     assert second.status_code == 429
     assert second.headers["retry-after"]
+
+
+def test_write_routes_reject_oversized_chunked_body():
+    import asyncio
+
+    from app.main import RequestBodySizeLimitMiddleware
+
+    downstream_read = False
+    sent_messages = []
+    incoming = [
+        {"type": "http.request", "body": b"1234", "more_body": True},
+        {"type": "http.request", "body": b"5678", "more_body": False},
+    ]
+
+    async def downstream(scope, receive, send):
+        nonlocal downstream_read
+        while True:
+            message = await receive()
+            if message["type"] == "http.request":
+                downstream_read = True
+                if not message.get("more_body", False):
+                    return
+
+    async def receive():
+        return incoming.pop(0)
+
+    async def send(message):
+        sent_messages.append(message)
+
+    middleware = RequestBodySizeLimitMiddleware(downstream, max_bytes=5)
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/api/application-events",
+        "headers": [],
+    }
+
+    asyncio.run(middleware(scope, receive, send))
+
+    assert downstream_read is True
+    assert sent_messages[0]["status"] == 413
+    assert b"Request body too large" in sent_messages[1]["body"]
+
+
+def test_write_routes_reject_oversized_declared_body_before_downstream():
+    import asyncio
+
+    from app.main import RequestBodySizeLimitMiddleware
+
+    downstream_called = False
+    sent_messages = []
+
+    async def downstream(scope, receive, send):
+        nonlocal downstream_called
+        downstream_called = True
+
+    async def receive():
+        raise AssertionError("Oversized declared body must be rejected early.")
+
+    async def send(message):
+        sent_messages.append(message)
+
+    middleware = RequestBodySizeLimitMiddleware(downstream, max_bytes=5)
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/api/application-events",
+        "headers": [(b"content-length", b"6")],
+    }
+
+    asyncio.run(middleware(scope, receive, send))
+
+    assert downstream_called is False
+    assert sent_messages[0]["status"] == 413
