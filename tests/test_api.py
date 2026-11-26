@@ -74,3 +74,14 @@ def test_public_quality_api_hides_retired_project_history(monkeypatch):
     assert {row["target"] for row in body["runs"]} == {"evidenceflow", "quotesense"}
     assert body["target_count"] == 2
     assert body["target_gate_passes"] == 2
+
+def test_dashboard_keeps_read_only_data_sources_independent():
+    with TestClient(app) as client:
+        response = client.get("/")
+
+    assert response.status_code == 200
+    assert "Promise.allSettled" in response.text
+    assert "Replay evaluation results are temporarily unavailable." in response.text
+    assert "Application summary temporarily unavailable" in response.text
+    assert "HUB_API_KEY" not in response.text
+    assert "No provider key required" in response.text
