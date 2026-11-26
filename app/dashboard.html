@@ -149,18 +149,20 @@ function renderEvents(events){
 }
 async function get(path){const response=await fetch(path,{cache:"no-store"});if(!response.ok)throw new Error(path+" returned "+response.status);return response.json();}
 async function refresh(){
- const paths=["/health","/api/application-summary","/api/application-events?limit=60","/api/ai-quality?limit=200"];
+ const paths=["/api/application-summary","/api/application-events?limit=60","/api/ai-quality?limit=200"];
  const results=await Promise.allSettled(paths.map(path=>get(path)));
- const [healthResult,summaryResult,eventsResult,qualityResult]=results;
- const healthOk=healthResult.status==="fulfilled";
+ const [summaryResult,eventsResult,qualityResult]=results;
  const summaryOk=summaryResult.status==="fulfilled"&&summaryResult.value&&typeof summaryResult.value==="object";
  const eventsOk=eventsResult.status==="fulfilled"&&Array.isArray(eventsResult.value);
  const qualityOk=qualityResult.status==="fulfilled"&&qualityResult.value&&typeof qualityResult.value==="object";
-
- $("serviceDot").className="dot "+(healthOk?"good":"warn");
- $("serviceStatus").textContent=healthOk
-  ? "Evaluation service online"
-  : "Service health check unavailable";
+ const availableSources=[summaryOk,eventsOk,qualityOk].filter(Boolean).length;
+ const serviceHealthy=availableSources===3;
+ $("serviceDot").className="dot "+(serviceHealthy?"good":"warn");
+ $("serviceStatus").textContent=serviceHealthy
+  ? "All evaluation data sources responding"
+  : availableSources>0
+   ? "Partial evaluation data available"
+   : "Evaluation data temporarily unavailable";
 
  if(summaryOk){
   const summary=summaryResult.value;
