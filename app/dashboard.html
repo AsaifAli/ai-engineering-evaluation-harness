@@ -149,29 +149,63 @@ function renderEvents(events){
 }
 async function get(path){const response=await fetch(path,{cache:"no-store"});if(!response.ok)throw new Error(path+" returned "+response.status);return response.json();}
 async function refresh(){
- try{
-  const [health,summary,events,quality]=await Promise.all([
-   get("/health"),get("/api/application-summary"),get("/api/application-events?limit=60"),get("/api/ai-quality?limit=200")
-  ]);
-  $("serviceDot").className="dot good";$("serviceStatus").textContent="Evaluation service online";
+ const paths=["/health","/api/application-summary","/api/application-events?limit=60","/api/ai-quality?limit=200"];
+ const results=await Promise.allSettled(paths.map(path=>get(path)));
+ const [healthResult,summaryResult,eventsResult,qualityResult]=results;
+ const healthOk=healthResult.status==="fulfilled";
+ const summaryOk=summaryResult.status==="fulfilled"&&summaryResult.value&&typeof summaryResult.value==="object";
+ const eventsOk=eventsResult.status==="fulfilled"&&Array.isArray(eventsResult.value);
+ const qualityOk=qualityResult.status==="fulfilled"&&qualityResult.value&&typeof qualityResult.value==="object";
+
+ $("serviceDot").className="dot "+(healthOk?"good":"warn");
+ $("serviceStatus").textContent=healthOk
+  ? "Evaluation service online"
+  : "Service health check unavailable";
+
+ if(summaryOk){
+  const summary=summaryResult.value;
   const projects=summary.projects||{};
-  renderProject("evidence",projects.evidenceflow||{});
-  renderProject("quote",projects.quotesense||{});
+  const evidence=projects.evidenceflow||{};
+  const quote=projects.quotesense||{};
+  renderProject("evidence",evidence);
+  renderProject("quote",quote);
   const total=Number(summary.total_events||0);
-  const success=Number(projects.evidenceflow?.successful||0)+Number(projects.quotesense?.successful||0);
-  const attention=["evidenceflow","quotesense"].reduce((sum,key)=>sum+Number(projects[key]?.failed||0)+Number(projects[key]?.warnings||0),0);
-  $("totalEvents").textContent=total;$("successfulRuns").textContent=success;$("attentionRuns").textContent=attention;
-  const latest=events[0];
-  $("lastActivity").textContent=latest?fmtTime(latest.created_at).split(",").slice(-1)[0].trim():"—";
-  $("lastActivitySub").textContent=latest?labelProject(latest.project)+" · "+latest.workflow:"No application event received yet";
-  renderEvents(events);renderQuality(quality);
-  const stamp=new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"});
-  $("lastRefresh").textContent="Updated "+stamp;$("refreshFooter").textContent="Read-only client view · last refresh "+stamp;
- }catch(error){
-  $("serviceDot").className="dot bad";$("serviceStatus").textContent="Service data unavailable";
-  $("qualityCards").innerHTML='<div class="panel"><div class="empty">Evaluation results could not be loaded.</div></div>';
-  $("lastRefresh").textContent=error.message;
-  console.error(error);
+  const success=Number(evidence.successful||0)+Number(quote.successful||0);
+  const attention=Number(evidence.failed||0)+Number(evidence.warnings||0)+Number(quote.failed||0)+Number(quote.warnings||0);
+  $("totalEvents").textContent=total;
+  $("successfulRuns").textContent=success;
+  $("attentionRuns").textContent=attention;
+  const allLast=[evidence.last_event_at,quote.last_event_at].filter(Boolean).sort();
+  $("lastActivity").textContent=allLast.length?fmtTime(allLast[allLast.length-1]):"—";
+  $("lastActivitySub").textContent=total
+   ? "Most recent event across the connected applications"
+   : "No application event received yet";
+ }else{
+  ["totalEvents","successfulRuns","attentionRuns","lastActivity"].forEach(id=>$(id).textContent="—");
+  $("lastActivitySub").textContent="Application summary temporarily unavailable";
+  $("evidenceEvents").textContent=$("evidenceSuccess").textContent=$("evidenceFailed").textContent=$("evidenceLatency").textContent="—";
+  $("quoteEvents").textContent=$("quoteSuccess").textContent=$("quoteFailed").textContent=$("quoteLatency").textContent="—";
+ }
+
+ if(eventsOk){
+  renderEvents(eventsResult.value);
+ }else{
+  $("activityTable").innerHTML='<tr><td colspan="7" class="empty">Recent activity is temporarily unavailable. Aggregate counts may still be shown above.</td></tr>';
+ }
+
+ if(qualityOk){
+  renderQuality(qualityResult.value);
+ }else{
+  $("qualityCards").innerHTML='<div class="panel"><div class="empty">Replay evaluation results are temporarily unavailable.</div></div>';
+ }
+
+ const stamp=new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"});
+ const sourceFailures=results.filter(result=>result.status==="rejected").length;
+ $("lastRefresh").textContent="Updated "+stamp+(sourceFailures?" · "+sourceFailures+" source(s) unavailable":"");
+ $("refreshFooter").textContent="Read-only client view · auto-refresh every 20 seconds · last check "+stamp;
+
+ if(sourceFailures){
+  console.warn("Some read-only evaluation data sources did not respond.");
  }
 }
 refresh();setInterval(refresh,20000);
