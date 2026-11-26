@@ -13,3 +13,9 @@ HARNESS_INGEST_TOKENS_JSON = os.getenv("HARNESS_INGEST_TOKENS_JSON", "").strip()
 HUB_IP_RATE_LIMIT_PER_MINUTE = max(1, int(os.getenv("HUB_IP_RATE_LIMIT_PER_MINUTE", "30")))
 HUB_RATE_LIMIT_PER_MINUTE = max(1, int(os.getenv("HUB_RATE_LIMIT_PER_MINUTE", "10")))
 PROJECT_INGEST_RATE_LIMIT_PER_MINUTE = max(1, int(os.getenv("PROJECT_INGEST_RATE_LIMIT_PER_MINUTE", "30")))
+
+# Bound write API bodies before JSON/Pydantic parsing (including chunked bodies).
+WRITE_REQUEST_MAX_BYTES = max(
+    1024,
+    int(os.getenv("WRITE_REQUEST_MAX_BYTES", "65536")),
+)
