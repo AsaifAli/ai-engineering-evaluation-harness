@@ -13,7 +13,7 @@ def test_health_and_readiness():
         assert ready.json()["database"] == "ok"
 
 
-def test_replay_evaluation_is_limited_to_the_two_connected_apps(monkeypatch):
+def test_replay_evaluation_covers_the_three_connected_apps(monkeypatch):
     monkeypatch.setattr(auth, "HUB_API_KEY", "operator-test-token")
     headers = {"Authorization": "Bearer operator-test-token"}
     with TestClient(app) as client:
@@ -22,10 +22,10 @@ def test_replay_evaluation_is_limited_to_the_two_connected_apps(monkeypatch):
         response = client.post("/api/ai-quality/run?target=all", headers=headers)
         assert response.status_code == 200, response.text
         body = response.json()
-        assert body["target_count"] == 2
-        assert body["target_gate_passes"] == 2
+        assert body["target_count"] == 3
+        assert body["target_gate_passes"] == 3
         quality = client.get("/api/ai-quality").json()
-        assert set(quality["targets"]) == {"evidenceflow", "quotesense"}
+        assert set(quality["targets"]) == {"evidenceflow", "quotesense", "flowpilot"}
 
 
 def test_unknown_replay_target_is_rejected(monkeypatch):
@@ -55,11 +55,13 @@ def test_public_quality_api_hides_retired_project_history(monkeypatch):
             "targets": {
                 "evidenceflow": {"score": 0.9, "passed": True},
                 "quotesense": {"score": 0.95, "passed": True},
+                "flowpilot": {"score": 0.93, "passed": True},
                 "legacylens": {"score": 0.8, "passed": False},
             },
             "runs": [
                 {"target": "evidenceflow"},
                 {"target": "quotesense"},
+                {"target": "flowpilot"},
                 {"target": "legacylens"},
             ],
             "target_count": 3,

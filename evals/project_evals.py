@@ -23,6 +23,7 @@ MetricFn = Callable[[dict[str, Any], dict[str, Any]], dict[str, float]]
 PROJECT_PACKS = {
     "evidenceflow": "rag",
     "quotesense": "document_intelligence",
+    "flowpilot": "workflow_orchestration",
 }
 
 
@@ -34,7 +35,7 @@ def evaluate_case(
     *,
     mode: str,
 ) -> ProjectEval:
-    """Evaluate one EvidenceFlow or QuoteSense fixture against its quality pack."""
+    """Evaluate one application fixture against its domain-specific quality pack."""
     pack_name = PROJECT_PACKS.get(target)
     if pack_name is None:
         raise KeyError(f"unknown evaluation target: {target}")
@@ -53,7 +54,7 @@ def evaluate_case(
         if metric in metrics and metrics[metric] < threshold
     ]
     notes = [
-        "Replay fixtures are reference measurements, not production LLM quality claims."
+        "Replay fixtures are controlled reference measurements, not production quality claims."
     ] if mode == "replay" else []
     return ProjectEval(target, case_id, mode, metrics, score, not failures, failures, notes)
 

@@ -1,0 +1,101 @@
+[
+  {
+    "id": "content_approval_checkpoint",
+    "target": "flowpilot",
+    "mode": "replay",
+    "expected": {
+      "terminal_status": "awaiting_approval",
+      "required_steps": ["execute", "validate", "approval_requested"],
+      "approval_required": true,
+      "max_attempts": 1,
+      "retry_expected": false
+    },
+    "actual": {
+      "status": "awaiting_approval",
+      "completed_steps": ["execute", "validate", "approval_requested"],
+      "approval_required": true,
+      "approval_recorded": true,
+      "approved": false,
+      "external_action_executed": false,
+      "attempts": 1,
+      "state_transitions": ["queued", "running", "awaiting_approval"],
+      "state_persisted": true,
+      "audit_recorded": true
+    }
+  },
+  {
+    "id": "approved_outreach_completion",
+    "target": "flowpilot",
+    "mode": "replay",
+    "expected": {
+      "terminal_status": "completed",
+      "required_steps": ["execute", "validate", "approval_requested", "approval_granted", "completed"],
+      "approval_required": true,
+      "max_attempts": 2,
+      "retry_expected": false
+    },
+    "actual": {
+      "status": "completed",
+      "completed_steps": ["execute", "validate", "approval_requested", "approval_granted", "completed"],
+      "approval_required": true,
+      "approval_recorded": true,
+      "approved": true,
+      "external_action_executed": true,
+      "attempts": 1,
+      "state_transitions": ["queued", "running", "awaiting_approval", "completed"],
+      "state_persisted": true,
+      "audit_recorded": true
+    }
+  },
+  {
+    "id": "provider_failure_retry_recovery",
+    "target": "flowpilot",
+    "mode": "replay",
+    "expected": {
+      "terminal_status": "completed",
+      "recovery_terminal_status": "completed",
+      "required_steps": ["execute", "validate", "completed"],
+      "approval_required": false,
+      "retry_expected": true,
+      "max_attempts": 3,
+      "failure_code": "provider_rate_limited"
+    },
+    "actual": {
+      "status": "completed",
+      "completed_steps": ["execute", "validate", "completed"],
+      "approval_required": false,
+      "approval_recorded": false,
+      "approved": false,
+      "external_action_executed": false,
+      "attempts": 2,
+      "state_transitions": ["queued", "running", "retry_wait", "running", "completed"],
+      "state_persisted": true,
+      "audit_recorded": true,
+      "failure_code": "provider_rate_limited"
+    }
+  },
+  {
+    "id": "unapproved_external_action_blocked",
+    "target": "flowpilot",
+    "mode": "replay",
+    "expected": {
+      "terminal_status": "awaiting_approval",
+      "required_steps": ["execute", "validate", "approval_requested"],
+      "approval_required": true,
+      "max_attempts": 1,
+      "retry_expected": false
+    },
+    "actual": {
+      "status": "awaiting_approval",
+      "completed_steps": ["execute", "validate", "approval_requested"],
+      "approval_required": true,
+      "approval_recorded": true,
+      "approved": false,
+      "external_action_executed": false,
+      "attempts": 1,
+      "state_transitions": ["queued", "running", "awaiting_approval"],
+      "state_persisted": true,
+      "audit_recorded": true
+    }
+  }
+]
