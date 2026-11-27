@@ -23,6 +23,7 @@ MetricFn = Callable[[dict[str, Any], dict[str, Any]], dict[str, float]]
 PROJECT_PACKS = {
     "evidenceflow": "rag",
     "quotesense": "document_intelligence",
+    "flowpilot": "workflow_orchestration",
 }
 
 
@@ -34,7 +35,7 @@ def evaluate_case(
     *,
     mode: str,
 ) -> ProjectEval:
-    """Evaluate one EvidenceFlow or QuoteSense fixture against its quality pack."""
+    """Evaluate one connected application fixture against its workflow-specific quality pack."""
     pack_name = PROJECT_PACKS.get(target)
     if pack_name is None:
         raise KeyError(f"unknown evaluation target: {target}")
