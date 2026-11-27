@@ -21,7 +21,7 @@ init_db()
 
 
 class ApplicationEvent(BaseModel):
-    """Bounded, privacy-safe metadata from the two connected applications."""
+    """Bounded, privacy-safe metadata from connected applications."""
 
     model_config = ConfigDict(extra="forbid")
 
