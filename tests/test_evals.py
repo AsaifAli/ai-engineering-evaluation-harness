@@ -5,6 +5,7 @@ from evals.scoring import score_case
 def test_only_retained_application_fixtures_are_registered():
     assert len(load_cases("evidenceflow")) >= 1
     assert len(load_cases("quotesense")) >= 1
+    assert len(load_cases("flowpilot")) >= 3
 
 
 def test_scoring_requires_expected_fields():

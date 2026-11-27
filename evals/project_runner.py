@@ -11,8 +11,7 @@ from app.db import insert_audit, insert_ai_quality
 from evals.project_evals import evaluate_case
 
 DATA = Path(__file__).parent / "datasets"
-# This harness serves only the two application integrations owned by the studio.
-TARGETS = ("evidenceflow", "quotesense")
+TARGETS = ("evidenceflow", "quotesense", "flowpilot")
 
 
 def load_cases(target: str) -> list[dict[str, Any]]:
@@ -109,7 +108,7 @@ def run_all(mode: str = "replay", **kwargs: Any) -> dict[str, Any]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run EvidenceFlow and QuoteSense replay evaluations")
+    parser = argparse.ArgumentParser(description="Run EvidenceFlow, QuoteSense and FlowPilot replay evaluations")
     parser.add_argument("--target", choices=["all", *TARGETS], default="all")
     parser.add_argument("--mode", choices=["replay"], default="replay")
     parser.add_argument("--dataset-version", default="v1")

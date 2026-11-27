@@ -27,7 +27,7 @@ h1{font-size:clamp(30px,4.3vw,48px);line-height:1.04;letter-spacing:-.05em;margi
 .kpi,.panel,.app-card{border:1px solid var(--line);background:linear-gradient(180deg,rgba(17,28,44,.96),rgba(12,20,33,.96));border-radius:15px}
 .kpi{padding:15px 16px}.kpi-label{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase}.kpi-value{font-size:26px;font-weight:780;letter-spacing:-.04em;margin-top:5px}.kpi-sub{font-size:10px;color:var(--soft);margin-top:3px}
 .section{margin-top:22px}.sectionhead{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:11px}.sectionhead h2{font-size:17px;margin:0;letter-spacing:-.025em}.sectionhead p{color:var(--muted);font-size:11px;margin:3px 0 0}
-.apps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.apps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
 .app-card{padding:17px 18px;position:relative;overflow:hidden}.app-card:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--cyan)}.app-card.quote:before{background:var(--violet)}
 .app-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.app-head h3{font-size:15px;margin:0}.app-sub{font-size:11px;color:var(--muted);margin-top:3px}
 .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 8px;color:var(--muted);font-size:10px;white-space:nowrap}.pill.good{color:#b9f2d0;border-color:rgba(109,224,161,.25);background:rgba(109,224,161,.06)}.pill.warn{color:#f4d69a;border-color:rgba(242,199,120,.25);background:rgba(242,199,120,.06)}.pill.bad{color:#ffc0c7;border-color:rgba(255,135,148,.25);background:rgba(255,135,148,.06)}
@@ -35,7 +35,7 @@ h1{font-size:clamp(30px,4.3vw,48px);line-height:1.04;letter-spacing:-.05em;margi
 .panel{overflow:hidden}.panel-inner{padding:16px 18px}.tablewrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:680px;font-size:11px}.table th,.table td{text-align:left;padding:10px 12px;border-bottom:1px solid rgba(148,167,194,.09);vertical-align:middle}.table th{color:var(--soft);text-transform:uppercase;letter-spacing:.09em;font-size:9px;font-weight:750}.table tr:last-child td{border-bottom:0}.table td{color:#dce8f8}.muted{color:var(--muted)!important}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.quality{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.quality-card{border:1px solid var(--line);border-radius:13px;padding:15px 16px;background:rgba(7,14,24,.35)}.quality-top{display:flex;align-items:center;justify-content:space-between;gap:10px}.quality-top strong{font-size:13px}.score{font-size:24px;font-weight:800;letter-spacing:-.04em}.metric-list{display:grid;gap:8px;margin-top:12px}.metric{display:grid;grid-template-columns:115px 1fr 45px;align-items:center;gap:9px;font-size:10px;color:var(--muted)}.bar{height:6px;background:#1e2c41;border-radius:99px;overflow:hidden}.bar span{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--violet));border-radius:99px}
 .note{border:1px solid rgba(120,213,238,.14);background:rgba(120,213,238,.035);padding:13px 15px;border-radius:12px;color:var(--muted);font-size:11px;line-height:1.6}
 .empty{padding:26px;text-align:center;color:var(--soft);font-size:11px}.footer{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:22px;color:var(--soft);font-size:10px}
-@media(max-width:880px){.hero{display:block}.hero-note{margin-top:17px;max-width:none}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:880px){.hero{display:block}.hero-note{margin-top:17px;max-width:none}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.apps{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.shell{padding:18px 15px 34px}.toplink{display:none}.apps,.quality{grid-template-columns:1fr}.app-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.sectionhead{display:block}.kpis{gap:8px}.kpi{padding:12px}.kpi-value{font-size:22px}}
 </style>
 </head>
@@ -53,14 +53,14 @@ h1{font-size:clamp(30px,4.3vw,48px);line-height:1.04;letter-spacing:-.05em;margi
     <div>
       <div class="kicker">Engineering assurance / internal evaluation</div>
       <h1>Evidence behind the AI systems.</h1>
-      <p class="lede">A read-only view of the quality signals and runtime activity reported by EvidenceFlow and QuoteSense. This is the engineering layer behind the demonstrations—not another product or user workspace.</p>
+      <p class="lede">A read-only view of the quality signals and runtime activity reported by EvidenceFlow, QuoteSense and FlowPilot. This is the engineering layer behind the demonstrations—not another product or user workspace.</p>
       <div class="statusline"><span id="serviceDot" class="dot"></span><span id="serviceStatus">Checking service…</span><span>·</span><span id="lastRefresh">Waiting for first refresh</span></div>
     </div>
     <div class="hero-note"><strong>No provider key required</strong><span>Client inspection is read-only. Project services send bounded telemetry; this dashboard never requests BYOK credentials or starts model runs.</span></div>
   </section>
 
   <section class="kpis" aria-label="Combined application activity">
-    <div class="kpi"><div class="kpi-label">Recorded events</div><div class="kpi-value" id="totalEvents">—</div><div class="kpi-sub">Across the two connected applications</div></div>
+    <div class="kpi"><div class="kpi-label">Recorded events</div><div class="kpi-value" id="totalEvents">—</div><div class="kpi-sub">Across the three connected applications</div></div>
     <div class="kpi"><div class="kpi-label">Successful runs</div><div class="kpi-value" id="successfulRuns">—</div><div class="kpi-sub">Application-reported completions</div></div>
     <div class="kpi"><div class="kpi-label">Needs attention</div><div class="kpi-value" id="attentionRuns">—</div><div class="kpi-sub">Warnings and failed runs</div></div>
     <div class="kpi"><div class="kpi-label">Last activity</div><div class="kpi-value" id="lastActivity">—</div><div class="kpi-sub" id="lastActivitySub">No application event received yet</div></div>
@@ -87,6 +87,15 @@ h1{font-size:clamp(30px,4.3vw,48px);line-height:1.04;letter-spacing:-.05em;margi
           <div class="app-stat"><b id="quoteLatency">—</b><span>Avg. duration</span></div>
         </div>
       </article>
+      <article class="app-card">
+        <div class="app-head"><div><h3>FlowPilot</h3><div class="app-sub">Workflow orchestration · approvals · recovery</div></div><span id="flowStatus" class="pill">Awaiting events</span></div>
+        <div class="app-stats">
+          <div class="app-stat"><b id="flowEvents">—</b><span>Events</span></div>
+          <div class="app-stat"><b id="flowSuccess">—</b><span>Successful</span></div>
+          <div class="app-stat"><b id="flowFailed">—</b><span>Failed / warning</span></div>
+          <div class="app-stat"><b id="flowLatency">—</b><span>Avg. duration</span></div>
+        </div>
+      </article>
     </div>
   </section>
 
@@ -110,7 +119,7 @@ const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt
 const fmt=value=>value==null||value===""?"—":value;
 const fmtTime=value=>{if(!value)return"—";const d=new Date(value);return Number.isNaN(d.getTime())?String(value):d.toLocaleString([], {month:"short",day:"2-digit",hour:"2-digit",minute:"2-digit"});};
 const statusClass=status=>status==="success"?"good":status==="failed"?"bad":"warn";
-const labelProject=project=>project==="evidenceflow"?"EvidenceFlow":"QuoteSense";
+const labelProject=project=>project==="flowpilot"?"FlowPilot":project==="evidenceflow"?"EvidenceFlow":"QuoteSense";
 function setPill(id,status){
  const el=$(id);el.className="pill "+(status==="success"?"good":status==="failed"?"bad":status==="warning"?"warn":"");
  el.textContent=status==="success"?"Reporting normally":status==="failed"?"Recent failure":status==="warning"?"Needs attention":"Awaiting events";
@@ -121,12 +130,12 @@ function renderProject(prefix,data){
  $(prefix+"Success").textContent=Number(data.successful||0);
  $(prefix+"Failed").textContent=Number(data.failed||0)+Number(data.warnings||0);
  $(prefix+"Latency").textContent=data.average_duration_ms==null?"—":Math.round(data.average_duration_ms)+" ms";
- setPill(prefix==="evidence"?"evidenceStatus":"quoteStatus",data.last_status);
+ setPill(prefix==="evidence"?"evidenceStatus":prefix==="quote"?"quoteStatus":"flowStatus",data.last_status);
 }
 function renderQuality(payload){
  const targets=payload?.targets||{};
- const names={evidenceflow:"EvidenceFlow · RAG evaluation",quotesense:"QuoteSense · document evaluation"};
- const keys={evidenceflow:["recall@5","ndcg@5","mrr","citation_correctness","groundedness"],quotesense:["field_exact_match","critical_field_accuracy","schema_validity","risk_f1"]};
+ const names={evidenceflow:"EvidenceFlow · RAG evaluation",quotesense:"QuoteSense · document evaluation",flowpilot:"FlowPilot · workflow orchestration"};
+ const keys={evidenceflow:["recall@5","ndcg@5","mrr","citation_correctness","groundedness"],quotesense:["field_exact_match","critical_field_accuracy","schema_validity","risk_f1"],flowpilot:["workflow_completion","step_coverage","approval_compliance","retry_recovery","state_integrity","error_classification_accuracy","audit_traceability"]};
  const cards=Object.entries(names).map(([slug,name])=>{
   const item=targets[slug];const metrics=item?.metrics||{};
   const score=item?.score;
@@ -169,15 +178,17 @@ async function refresh(){
   const projects=summary.projects||{};
   const evidence=projects.evidenceflow||{};
   const quote=projects.quotesense||{};
+  const flow=projects.flowpilot||{};
   renderProject("evidence",evidence);
   renderProject("quote",quote);
+  renderProject("flow",flow);
   const total=Number(summary.total_events||0);
-  const success=Number(evidence.successful||0)+Number(quote.successful||0);
-  const attention=Number(evidence.failed||0)+Number(evidence.warnings||0)+Number(quote.failed||0)+Number(quote.warnings||0);
+  const success=Number(evidence.successful||0)+Number(quote.successful||0)+Number(flow.successful||0);
+  const attention=Number(evidence.failed||0)+Number(evidence.warnings||0)+Number(quote.failed||0)+Number(quote.warnings||0)+Number(flow.failed||0)+Number(flow.warnings||0);
   $("totalEvents").textContent=total;
   $("successfulRuns").textContent=success;
   $("attentionRuns").textContent=attention;
-  const allLast=[evidence.last_event_at,quote.last_event_at].filter(Boolean).sort();
+  const allLast=[evidence.last_event_at,quote.last_event_at,flow.last_event_at].filter(Boolean).sort();
   $("lastActivity").textContent=allLast.length?fmtTime(allLast[allLast.length-1]):"—";
   $("lastActivitySub").textContent=total
    ? "Most recent event across the connected applications"
@@ -187,6 +198,7 @@ async function refresh(){
   $("lastActivitySub").textContent="Application summary temporarily unavailable";
   $("evidenceEvents").textContent=$("evidenceSuccess").textContent=$("evidenceFailed").textContent=$("evidenceLatency").textContent="—";
   $("quoteEvents").textContent=$("quoteSuccess").textContent=$("quoteFailed").textContent=$("quoteLatency").textContent="—";
+  $("flowEvents").textContent=$("flowSuccess").textContent=$("flowFailed").textContent=$("flowLatency").textContent="—";
  }
 
  if(eventsOk){

@@ -23,7 +23,7 @@ def test_application_ingest_uses_project_scoped_tokens(monkeypatch):
     monkeypatch.setattr(
         config,
         "HARNESS_INGEST_TOKENS_JSON",
-        '{"evidenceflow":"evidence-token","quotesense":"quote-token"}',
+        '{"evidenceflow":"evidence-token","quotesense":"quote-token","flowpilot":"flow-token"}',
     )
     payload = {
         "event_id": "ef-" + "a" * 32,
@@ -58,6 +58,20 @@ def test_application_ingest_uses_project_scoped_tokens(monkeypatch):
         )
         assert duplicate.status_code == 202
         assert duplicate.json()["duplicate"] is True
+
+        flowpilot_payload = {
+            **payload,
+            "event_id": "fp-" + "f" * 32,
+            "project": "flowpilot",
+            "workflow": "outreach",
+        }
+        flowpilot_response = client.post(
+            "/api/application-events",
+            headers={"Authorization": "Bearer flow-token"},
+            json=flowpilot_payload,
+        )
+        assert flowpilot_response.status_code == 202
+        assert flowpilot_response.json()["accepted"] is True
 
 
 def test_ingest_rejects_content_fields_and_invalid_metrics(monkeypatch):

@@ -1,17 +1,18 @@
 # AI Engineering Studio — Engineering Assurance
 
-A small internal evaluation and observability service for the studio's two connected application references:
+A small internal evaluation and observability service for the studio's three connected application references:
 
 - **EvidenceFlow** — retrieval, evidence and answer-quality evaluation.
 - **QuoteSense** — structured extraction, validation and procurement decision-quality evaluation.
+- **FlowPilot** — workflow completion, approval policy, retry recovery and execution-state evaluation.
 
-The agency website remains the public front door. This service is a read-only engineering assurance view for visitors and a private telemetry intake for the two applications. It is not a standalone SaaS product, and it does not request or store BYOK credentials.
+The agency website remains the public front door. This service is a read-only engineering assurance view for visitors and a private telemetry intake for the three applications. It is not a standalone SaaS product, and it does not request or store BYOK credentials.
 
 ## What stays
 
 - Project-specific replay evaluation against versioned synthetic fixtures.
-- Quality gates and metric history for EvidenceFlow and QuoteSense.
-- Application event intake for bounded run metadata and numeric quality signals.
+- Quality gates and metric history for EvidenceFlow, QuoteSense and FlowPilot.
+- Application event intake for bounded run metadata and numeric quality signals from all three projects.
 - Event history, success/failure counts and average run duration.
 - A read-only dashboard at `/`.
 
@@ -46,7 +47,7 @@ The dashboard is intentionally read-only and does not require a provider key or 
 
 Each connected project can send an event with:
 
-- Project slug: `evidenceflow` or `quotesense`.
+- Project slug: `evidenceflow`, `quotesense` or `flowpilot`.
 - Event type and status.
 - A short workflow identifier and optional request ID.
 - Duration and optional model label.
@@ -68,9 +69,9 @@ Set these environment variables on the Render services:
 **Evaluation Harness**
 - `DATABASE_URL` — managed PostgreSQL URL for persistence. Without it, the service uses local SQLite.
 - `HUB_API_KEY` — operator-only key for manually triggering replay evaluation.
-- `HARNESS_INGEST_TOKENS_JSON` — JSON object mapping the two project slugs to their distinct tokens, e.g. `{"evidenceflow":"...","quotesense":"..."}`.
+- `HARNESS_INGEST_TOKENS_JSON` — JSON object mapping the three project slugs to their distinct tokens, e.g. `{"evidenceflow":"...","quotesense":"...","flowpilot":"..."}`.
 
-**EvidenceFlow and QuoteSense**
+**EvidenceFlow, QuoteSense and FlowPilot**
 - `EVALUATION_HARNESS_URL=https://ai-engineering-evaluation-harness.onrender.com`
 - `EVALUATION_HARNESS_INGEST_TOKEN` — the token matching that application's key in the harness JSON object.
 

@@ -43,3 +43,55 @@ def test_quotesense_structured_document_quality_gate():
     assert result.passed
     assert result.metrics["field_exact_match"] == 1.0
     assert result.metrics["schema_validity"] == 1.0
+
+
+def test_flowpilot_approval_retry_and_state_quality_gate():
+    expected = {
+        "terminal_status": "completed",
+        "recovery_terminal_status": "completed",
+        "required_steps": ["execute", "validate", "approval_requested", "approval_granted", "completed"],
+        "approval_required": True,
+        "retry_expected": True,
+        "max_attempts": 3,
+        "failure_code": "provider_rate_limited",
+    }
+    actual = {
+        "status": "completed",
+        "completed_steps": ["execute", "validate", "approval_requested", "approval_granted", "completed"],
+        "approval_recorded": True,
+        "approved": True,
+        "external_action_executed": True,
+        "attempts": 2,
+        "state_transitions": ["queued", "running", "retry_wait", "running", "awaiting_approval", "completed"],
+        "state_persisted": True,
+        "audit_recorded": True,
+        "failure_code": "provider_rate_limited",
+    }
+    result = evaluate_case("flowpilot", "approval-retry", expected, actual, mode="replay")
+    assert result.passed
+    assert result.metrics["approval_compliance"] == 1.0
+    assert result.metrics["retry_recovery"] == 1.0
+    assert result.metrics["state_integrity"] == 1.0
+
+
+def test_flowpilot_blocks_unapproved_external_actions():
+    expected = {
+        "terminal_status": "awaiting_approval",
+        "required_steps": ["execute", "validate", "approval_requested"],
+        "approval_required": True,
+        "max_attempts": 1,
+    }
+    actual = {
+        "status": "awaiting_approval",
+        "completed_steps": ["execute", "validate", "approval_requested"],
+        "approval_recorded": True,
+        "approved": False,
+        "external_action_executed": True,
+        "attempts": 1,
+        "state_transitions": ["queued", "running", "awaiting_approval"],
+        "state_persisted": True,
+        "audit_recorded": True,
+    }
+    result = evaluate_case("flowpilot", "approval-violation", expected, actual, mode="replay")
+    assert not result.passed
+    assert "approval_compliance<1.0" in result.gate_failures
