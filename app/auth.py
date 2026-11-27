@@ -78,8 +78,6 @@ def require_project_ingest_token(project: str, authorization: str | None) -> Non
     if not supplied or not secrets.compare_digest(supplied, expected):
         raise HTTPException(status_code=401, detail="invalid project ingest token")
 
-    from . import config
-
     fingerprint = hashlib.sha256(
         f"{project}:{supplied}".encode("utf-8")
     ).hexdigest()
