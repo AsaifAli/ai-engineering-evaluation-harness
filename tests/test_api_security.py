@@ -313,3 +313,31 @@ def test_dedicated_project_token_overrides_legacy_json_entry(monkeypatch):
 
     assert legacy.status_code == 401
     assert dedicated.status_code == 202
+
+
+def test_dedicated_project_tokens_cover_all_application_slugs(monkeypatch):
+    monkeypatch.setattr(config, "HARNESS_INGEST_TOKENS_JSON", "")
+    projects = (
+        ("evidenceflow", "HARNESS_EVIDENCEFLOW_INGEST_TOKEN", "evidence-dedicated-token"),
+        ("quotesense", "HARNESS_QUOTESENSE_INGEST_TOKEN", "quote-dedicated-token"),
+        ("flowpilot", "HARNESS_FLOWPILOT_INGEST_TOKEN", "flowpilot-dedicated-token"),
+    )
+    for _, setting_name, token in projects:
+        monkeypatch.setattr(config, setting_name, token, raising=False)
+
+    with TestClient(app) as client:
+        for index, (project, _, token) in enumerate(projects):
+            payload = {
+                "event_id": f"{project}-" + str(index) * 32,
+                "project": project,
+                "event_type": "run.completed",
+                "status": "success",
+                "workflow": "integration_test",
+                "metrics": {"approval_pending": False},
+            }
+            response = client.post(
+                "/api/application-events",
+                headers={"Authorization": f"Bearer {token}"},
+                json=payload,
+            )
+            assert response.status_code == 202
