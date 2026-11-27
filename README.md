@@ -57,9 +57,10 @@ The payload schema rejects unknown fields. Do not send user prompts, chat transc
 
 ## Configuration
 
-The harness accepts two separate project ingestion tokens. Generate independent random values, for example:
+The harness uses a distinct ingestion token per application. Generate three independent random values, for example:
 
 ```bash
+openssl rand -hex 32
 openssl rand -hex 32
 openssl rand -hex 32
 ```
@@ -69,11 +70,12 @@ Set these environment variables on the Render services:
 **Evaluation Harness**
 - `DATABASE_URL` — managed PostgreSQL URL for persistence. Without it, the service uses local SQLite.
 - `HUB_API_KEY` — operator-only key for manually triggering replay evaluation.
-- `HARNESS_INGEST_TOKENS_JSON` — JSON object mapping the three project slugs to their distinct tokens, e.g. `{"evidenceflow":"...","quotesense":"...","flowpilot":"..."}`.
+- `HARNESS_INGEST_TOKENS_JSON` — legacy JSON object mapping project slugs to distinct tokens.
+- `HARNESS_EVIDENCEFLOW_INGEST_TOKEN`, `HARNESS_QUOTESENSE_INGEST_TOKEN`, and `HARNESS_FLOWPILOT_INGEST_TOKEN` — optional per-project credentials. When set, a dedicated variable takes precedence over that project's entry in the legacy JSON map. This allows rotating or adding one integration without reading or replacing other write-only Render secrets.
 
 **EvidenceFlow, QuoteSense and FlowPilot**
 - `EVALUATION_HARNESS_URL=https://ai-engineering-evaluation-harness.onrender.com`
-- `EVALUATION_HARNESS_INGEST_TOKEN` — the token matching that application's key in the harness JSON object.
+- `EVALUATION_HARNESS_INGEST_TOKEN` — the token matching that application's dedicated harness setting.
 
 Keep tokens only in hosting environment settings. Never commit them or expose them with a `NEXT_PUBLIC_` variable. Telemetry delivery is best-effort: an unavailable harness must never stop a user workflow.
 

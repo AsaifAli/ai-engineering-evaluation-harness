@@ -48,14 +48,26 @@ def require_project_ingest_token(project: str, authorization: str | None) -> Non
     """Authenticate a single project's telemetry writer, without admin access."""
     import json
 
-    from .config import HARNESS_INGEST_TOKENS_JSON
+    from . import config
 
-    try:
-        configured = json.loads(HARNESS_INGEST_TOKENS_JSON or "{}")
-    except json.JSONDecodeError as exc:
-        raise HTTPException(status_code=503, detail="project ingest tokens are misconfigured") from exc
+    dedicated_tokens = {
+        "evidenceflow": config.HARNESS_EVIDENCEFLOW_INGEST_TOKEN,
+        "quotesense": config.HARNESS_QUOTESENSE_INGEST_TOKEN,
+        "flowpilot": config.HARNESS_FLOWPILOT_INGEST_TOKEN,
+    }
+    expected = dedicated_tokens.get(project, "").strip()
 
-    expected = configured.get(project) if isinstance(configured, dict) else None
+    # Dedicated settings let operators rotate one project without rewriting
+    # the legacy JSON map, whose existing values may be write-only secrets.
+    if not expected:
+        try:
+            configured = json.loads(config.HARNESS_INGEST_TOKENS_JSON or "{}")
+        except json.JSONDecodeError as exc:
+            raise HTTPException(
+                status_code=503,
+                detail="project ingest tokens are misconfigured",
+            ) from exc
+        expected = configured.get(project) if isinstance(configured, dict) else None
     if not isinstance(expected, str) or not expected.strip():
         raise HTTPException(status_code=503, detail=f"ingest is not configured for {project}")
 
@@ -65,8 +77,6 @@ def require_project_ingest_token(project: str, authorization: str | None) -> Non
     supplied = authorization.split(" ", 1)[1].strip()
     if not supplied or not secrets.compare_digest(supplied, expected):
         raise HTTPException(status_code=401, detail="invalid project ingest token")
-
-    from . import config
 
     fingerprint = hashlib.sha256(
         f"{project}:{supplied}".encode("utf-8")

@@ -8,6 +8,9 @@ DB_SCHEMA = os.getenv("DB_SCHEMA", "harness").strip() or "harness"
 HARNESS_CONFIG_VERSION = os.getenv("HARNESS_CONFIG_VERSION", "v1")
 HUB_API_KEY = os.getenv("HUB_API_KEY", "").strip()
 HARNESS_INGEST_TOKENS_JSON = os.getenv("HARNESS_INGEST_TOKENS_JSON", "").strip()
+HARNESS_EVIDENCEFLOW_INGEST_TOKEN = os.getenv("HARNESS_EVIDENCEFLOW_INGEST_TOKEN", "").strip()
+HARNESS_QUOTESENSE_INGEST_TOKEN = os.getenv("HARNESS_QUOTESENSE_INGEST_TOKEN", "").strip()
+HARNESS_FLOWPILOT_INGEST_TOKEN = os.getenv("HARNESS_FLOWPILOT_INGEST_TOKEN", "").strip()
 
 # Process-local backstops for write APIs; configure ingress limits for multi-instance deployments.
 HUB_IP_RATE_LIMIT_PER_MINUTE = max(1, int(os.getenv("HUB_IP_RATE_LIMIT_PER_MINUTE", "30")))
