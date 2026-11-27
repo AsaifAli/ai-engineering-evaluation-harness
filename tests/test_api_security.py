@@ -248,3 +248,68 @@ def test_write_routes_reject_oversized_declared_body_before_downstream():
 
     assert downstream_called is False
     assert sent_messages[0]["status"] == 413
+
+
+def test_dedicated_project_ingest_tokens_work_without_changing_legacy_json(monkeypatch):
+    monkeypatch.setattr(config, "HARNESS_INGEST_TOKENS_JSON", "")
+    monkeypatch.setattr(
+        config,
+        "HARNESS_FLOWPILOT_INGEST_TOKEN",
+        "flowpilot-dedicated-token",
+        raising=False,
+    )
+    payload = {
+        "event_id": "fp-" + "e" * 32,
+        "project": "flowpilot",
+        "event_type": "run.completed",
+        "status": "success",
+        "workflow": "outreach",
+        "metrics": {"approval_pending": False},
+    }
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/application-events",
+            headers={"Authorization": "Bearer flowpilot-dedicated-token"},
+            json=payload,
+        )
+
+    assert response.status_code == 202
+    assert response.json()["accepted"] is True
+
+
+def test_dedicated_project_token_overrides_legacy_json_entry(monkeypatch):
+    monkeypatch.setattr(
+        config,
+        "HARNESS_INGEST_TOKENS_JSON",
+        '{"flowpilot":"legacy-flowpilot-token"}',
+    )
+    monkeypatch.setattr(
+        config,
+        "HARNESS_FLOWPILOT_INGEST_TOKEN",
+        "flowpilot-dedicated-token",
+        raising=False,
+    )
+    payload = {
+        "event_id": "fp-" + "g" * 32,
+        "project": "flowpilot",
+        "event_type": "run.completed",
+        "status": "success",
+        "workflow": "content",
+        "metrics": {"approval_pending": False},
+    }
+
+    with TestClient(app) as client:
+        legacy = client.post(
+            "/api/application-events",
+            headers={"Authorization": "Bearer legacy-flowpilot-token"},
+            json=payload,
+        )
+        dedicated = client.post(
+            "/api/application-events",
+            headers={"Authorization": "Bearer flowpilot-dedicated-token"},
+            json=payload,
+        )
+
+    assert legacy.status_code == 401
+    assert dedicated.status_code == 202
