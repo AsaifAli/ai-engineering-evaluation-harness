@@ -234,3 +234,39 @@ def test_write_routes_reject_oversized_declared_body_before_downstream():
 
     assert downstream_called is False
     assert sent_messages[0]["status"] == 413
+
+
+def test_flowpilot_project_ingest_uses_its_own_project_token(monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(
+        config,
+        "HARNESS_INGEST_TOKENS_JSON",
+        '{"evidenceflow":"evidence-token","quotesense":"quote-token","flowpilot":"flowpilot-token"}',
+    )
+    monkeypatch.setattr(main, "insert_application_event", lambda **kwargs: True)
+    payload = {
+        "event_id": "fp-" + "f" * 32,
+        "project": "flowpilot",
+        "event_type": "run.completed",
+        "status": "success",
+        "workflow": "content",
+        "duration_ms": 123.0,
+        "metrics": {"draft_count": 2, "approval_required": True},
+    }
+
+    with TestClient(app) as client:
+        wrong = client.post(
+            "/api/application-events",
+            headers={"Authorization": "Bearer quote-token"},
+            json=payload,
+        )
+        accepted = client.post(
+            "/api/application-events",
+            headers={"Authorization": "Bearer flowpilot-token"},
+            json=payload,
+        )
+
+    assert wrong.status_code == 401
+    assert accepted.status_code == 202
+    assert accepted.json()["accepted"] is True
