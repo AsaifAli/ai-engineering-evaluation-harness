@@ -72,10 +72,10 @@ def test_public_quality_api_hides_retired_project_history(monkeypatch):
     with TestClient(app) as client:
         response = client.get("/api/ai-quality")
     body = response.json()
-    assert set(body["targets"]) == {"evidenceflow", "quotesense"}
-    assert {row["target"] for row in body["runs"]} == {"evidenceflow", "quotesense"}
-    assert body["target_count"] == 2
-    assert body["target_gate_passes"] == 2
+    assert set(body["targets"]) == {"evidenceflow", "quotesense", "flowpilot"}
+    assert {row["target"] for row in body["runs"]} == {"evidenceflow", "quotesense", "flowpilot"}
+    assert body["target_count"] == 3
+    assert body["target_gate_passes"] == 3
 
 def test_dashboard_keeps_read_only_data_sources_independent():
     with TestClient(app) as client:

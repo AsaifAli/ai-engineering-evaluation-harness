@@ -269,7 +269,7 @@ def ingest_application_event(
 
 @app.get("/api/application-events")
 def application_events(project: str | None = None, limit: int = 60):
-    if project is not None and project not in {"evidenceflow", "quotesense"}:
+    if project is not None and project not in {"evidenceflow", "quotesense", "flowpilot"}:
         raise HTTPException(400, "project must be evidenceflow, quotesense or flowpilot")
     return query_application_events(limit=limit, project=project)
 
