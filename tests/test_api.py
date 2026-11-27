@@ -64,9 +64,9 @@ def test_public_quality_api_hides_retired_project_history(monkeypatch):
                 {"target": "flowpilot"},
                 {"target": "legacylens"},
             ],
-            "target_count": 3,
-            "target_gate_passes": 2,
-            "platform_score": 0.88,
+            "target_count": 4,
+            "target_gate_passes": 3,
+            "platform_score": 0.92,
         },
     )
     with TestClient(app) as client:
@@ -74,8 +74,8 @@ def test_public_quality_api_hides_retired_project_history(monkeypatch):
     body = response.json()
     assert set(body["targets"]) == {"evidenceflow", "quotesense", "flowpilot"}
     assert {row["target"] for row in body["runs"]} == {"evidenceflow", "quotesense", "flowpilot"}
-    assert body["target_count"] == 2
-    assert body["target_gate_passes"] == 2
+    assert body["target_count"] == 3
+    assert body["target_gate_passes"] == 3
 
 def test_dashboard_keeps_read_only_data_sources_independent():
     with TestClient(app) as client:
