@@ -135,7 +135,7 @@ function renderProject(prefix,data){
 function renderQuality(payload){
  const targets=payload?.targets||{};
  const names={evidenceflow:"EvidenceFlow · RAG evaluation",quotesense:"QuoteSense · document evaluation",flowpilot:"FlowPilot · workflow orchestration"};
- const keys={evidenceflow:["recall@5","ndcg@5","mrr","citation_correctness","groundedness"],quotesense:["field_exact_match","critical_field_accuracy","schema_validity","risk_f1"],flowpilot:["workflow_completion","step_coverage","approval_compliance","retry_recovery","state_integrity","audit_traceability"]};
+ const keys={evidenceflow:["recall@5","ndcg@5","mrr","citation_correctness","groundedness"],quotesense:["field_exact_match","critical_field_accuracy","schema_validity","risk_f1"],flowpilot:["workflow_completion","step_coverage","approval_compliance","retry_recovery","state_integrity","error_classification_accuracy","audit_traceability"]};
  const cards=Object.entries(names).map(([slug,name])=>{
   const item=targets[slug];const metrics=item?.metrics||{};
   const score=item?.score;
