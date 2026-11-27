@@ -1,17 +1,18 @@
 # AI Engineering Studio — Engineering Assurance
 
-A small internal evaluation and observability service for the studio's two connected application references:
+A small internal evaluation and observability service for the studio's three connected application references:
 
 - **EvidenceFlow** — retrieval, evidence and answer-quality evaluation.
 - **QuoteSense** — structured extraction, validation and procurement decision-quality evaluation.
+- **FlowPilot** — workflow orchestration, output completeness, evidence disclosure, risk detection and human-approval guardrails.
 
-The agency website remains the public front door. This service is a read-only engineering assurance view for visitors and a private telemetry intake for the two applications. It is not a standalone SaaS product, and it does not request or store BYOK credentials.
+The agency website remains the public front door. This service is a read-only engineering assurance view for visitors and a private telemetry intake for the three applications. It is not a standalone SaaS product, and it does not request or store BYOK credentials.
 
 ## What stays
 
 - Project-specific replay evaluation against versioned synthetic fixtures.
-- Quality gates and metric history for EvidenceFlow and QuoteSense.
-- Application event intake for bounded run metadata and numeric quality signals.
+- Quality gates and metric history for EvidenceFlow, QuoteSense and FlowPilot.
+- Application event intake for bounded run metadata and numeric quality signals from EvidenceFlow, QuoteSense and FlowPilot.
 - Event history, success/failure counts and average run duration.
 - A read-only dashboard at `/`.
 
@@ -46,7 +47,7 @@ The dashboard is intentionally read-only and does not require a provider key or 
 
 Each connected project can send an event with:
 
-- Project slug: `evidenceflow` or `quotesense`.
+- Project slug: `evidenceflow`, `quotesense` or `flowpilot`.
 - Event type and status.
 - A short workflow identifier and optional request ID.
 - Duration and optional model label.
@@ -56,9 +57,10 @@ The payload schema rejects unknown fields. Do not send user prompts, chat transc
 
 ## Configuration
 
-The harness accepts two separate project ingestion tokens. Generate independent random values, for example:
+The harness accepts three separate project ingestion tokens. Generate independent random values, for example:
 
 ```bash
+openssl rand -hex 32
 openssl rand -hex 32
 openssl rand -hex 32
 ```
@@ -68,11 +70,11 @@ Set these environment variables on the Render services:
 **Evaluation Harness**
 - `DATABASE_URL` — managed PostgreSQL URL for persistence. Without it, the service uses local SQLite.
 - `HUB_API_KEY` — operator-only key for manually triggering replay evaluation.
-- `HARNESS_INGEST_TOKENS_JSON` — JSON object mapping the two project slugs to their distinct tokens, e.g. `{"evidenceflow":"...","quotesense":"..."}`.
+- `HARNESS_INGEST_TOKENS_JSON` — JSON object mapping the three project slugs to their distinct tokens, e.g. `{"evidenceflow":"...","quotesense":"...","flowpilot":"..."}`.
 
-**EvidenceFlow and QuoteSense**
+**EvidenceFlow, QuoteSense and FlowPilot**
 - `EVALUATION_HARNESS_URL=https://ai-engineering-evaluation-harness.onrender.com`
-- `EVALUATION_HARNESS_INGEST_TOKEN` — the token matching that application's key in the harness JSON object.
+- `EVALUATION_HARNESS_INGEST_TOKEN` — the token matching that application's key in the harness JSON object. For FlowPilot, configure this on the existing `ai-automation-api` service; no new Render service is required.
 
 Keep tokens only in hosting environment settings. Never commit them or expose them with a `NEXT_PUBLIC_` variable. Telemetry delivery is best-effort: an unavailable harness must never stop a user workflow.
 
@@ -93,4 +95,4 @@ Run tests:
 
 ```PYTHONPATH=. python -m pytest -q```
 
-Replay results are reference measurements against synthetic fixtures. They are not live model benchmarks, customer data or client outcome claims.
+Replay results are reference measurements against synthetic fixtures. They are not live model benchmarks, customer data or client outcome claims. FlowPilot's replay pack checks Content draft/channel constraints and approval staging, Competitor evidence/coverage disclosure, Outreach human-approval safeguards, and KPI blocker-to-risk detection. Actual FlowPilot run telemetry is a separate, best-effort metadata stream and never includes workflow inputs or outputs.
