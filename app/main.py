@@ -58,7 +58,7 @@ app = FastAPI(
     title="AI Engineering Evaluation Service",
     version="4.0.0",
     description=(
-        "Internal quality evaluation and read-only observability for EvidenceFlow and QuoteSense. "
+        "Internal quality evaluation and read-only observability for EvidenceFlow, QuoteSense and FlowPilot. "
         "Only bounded application metadata is accepted; no user content or provider credentials."
     ),
 )
