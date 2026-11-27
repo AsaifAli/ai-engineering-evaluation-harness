@@ -69,7 +69,8 @@ Set these environment variables on the Render services:
 **Evaluation Harness**
 - `DATABASE_URL` — managed PostgreSQL URL for persistence. Without it, the service uses local SQLite.
 - `HUB_API_KEY` — operator-only key for manually triggering replay evaluation.
-- `HARNESS_INGEST_TOKENS_JSON` — JSON object mapping the three project slugs to their distinct tokens, e.g. `{"evidenceflow":"...","quotesense":"...","flowpilot":"..."}`.
+- `HARNESS_INGEST_TOKENS_JSON` — legacy JSON object mapping project slugs to distinct tokens.
+- `HARNESS_EVIDENCEFLOW_INGEST_TOKEN`, `HARNESS_QUOTESENSE_INGEST_TOKEN`, and `HARNESS_FLOWPILOT_INGEST_TOKEN` — optional per-project credentials. When set, a dedicated variable takes precedence over that project's entry in the legacy JSON map. This allows rotating or adding one integration without reading or replacing other write-only Render secrets.
 
 **EvidenceFlow, QuoteSense and FlowPilot**
 - `EVALUATION_HARNESS_URL=https://ai-engineering-evaluation-harness.onrender.com`
