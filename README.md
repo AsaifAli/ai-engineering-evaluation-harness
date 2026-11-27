@@ -57,9 +57,10 @@ The payload schema rejects unknown fields. Do not send user prompts, chat transc
 
 ## Configuration
 
-The harness accepts two separate project ingestion tokens. Generate independent random values, for example:
+The harness uses a distinct ingestion token per application. Generate three independent random values, for example:
 
 ```bash
+openssl rand -hex 32
 openssl rand -hex 32
 openssl rand -hex 32
 ```
@@ -74,7 +75,7 @@ Set these environment variables on the Render services:
 
 **EvidenceFlow, QuoteSense and FlowPilot**
 - `EVALUATION_HARNESS_URL=https://ai-engineering-evaluation-harness.onrender.com`
-- `EVALUATION_HARNESS_INGEST_TOKEN` — the token matching that application's key in the harness JSON object.
+- `EVALUATION_HARNESS_INGEST_TOKEN` — the token matching that application's dedicated harness setting.
 
 Keep tokens only in hosting environment settings. Never commit them or expose them with a `NEXT_PUBLIC_` variable. Telemetry delivery is best-effort: an unavailable harness must never stop a user workflow.
 
