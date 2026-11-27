@@ -1,0 +1,105 @@
+[
+  {
+    "id": "content_channel_and_approval",
+    "target": "flowpilot",
+    "mode": "replay",
+    "expected": {
+      "workflow": "content",
+      "required_output_fields": ["posts", "strategy_note"],
+      "expected_drafts": [
+        {"topic": "AI operations", "channel": "x"},
+        {"topic": "AI operations", "channel": "linkedin"}
+      ],
+      "channel_limits": {"x": 280, "linkedin": 1300},
+      "approval_required": true
+    },
+    "actual": {
+      "workflow": "content",
+      "status": "awaiting_approval",
+      "output": {
+        "posts": [
+          {"topic": "AI operations", "channel": "x", "draft": "A concise, review-ready update on AI operations."},
+          {"topic": "AI operations", "channel": "linkedin", "draft": "A practical, review-ready perspective on responsible AI operations and clear human oversight."}
+        ],
+        "strategy_note": "Two channel-specific drafts prepared for review.",
+        "approval": {"status": "pending", "pending_count": 2, "total_count": 2}
+      }
+    }
+  },
+  {
+    "id": "competitor_evidence_disclosure",
+    "target": "flowpilot",
+    "mode": "replay",
+    "expected": {
+      "workflow": "competitor",
+      "required_output_fields": ["competitors", "recommended_actions", "coverage_note"],
+      "expected_competitors": ["Example Protocol"]
+    },
+    "actual": {
+      "workflow": "competitor",
+      "status": "completed",
+      "output": {
+        "competitors": [{
+          "entity": "Example Protocol",
+          "signals": [],
+          "priority": "unverified",
+          "observed_items": [],
+          "implication": "No matching items were observed in configured feeds; this does not establish inactivity.",
+          "evidence_basis": "case-insensitive competitor-name match in feed title only"
+        }],
+        "recommended_actions": ["Validate primary sources", "Record only supported claims"],
+        "coverage_note": "RSS/Atom feed-title matching is not comprehensive market monitoring."
+      }
+    }
+  },
+  {
+    "id": "outreach_requires_human_approval",
+    "target": "flowpilot",
+    "mode": "replay",
+    "expected": {
+      "workflow": "outreach",
+      "required_output_fields": ["candidates", "policy"],
+      "expected_candidates": ["Partner A"],
+      "approval_required": true
+    },
+    "actual": {
+      "workflow": "outreach",
+      "status": "awaiting_approval",
+      "output": {
+        "candidates": [{
+          "name": "Partner A",
+          "channel": "email",
+          "message": "A review-ready outreach draft.",
+          "approval_required": true
+        }],
+        "policy": "No autonomous external sending; every message requires an authorized human approval.",
+        "approval": {"status": "pending"}
+      }
+    }
+  },
+  {
+    "id": "kpi_blocker_risk_detection",
+    "target": "flowpilot",
+    "mode": "replay",
+    "expected": {
+      "workflow": "kpi",
+      "required_output_fields": ["normalized_updates", "risk_count", "risks"],
+      "expected_risk_entities": ["Team A"]
+    },
+    "actual": {
+      "workflow": "kpi",
+      "status": "completed",
+      "output": {
+        "normalized_updates": [{
+          "entity": "Team A",
+          "metric": "delivery",
+          "value": "behind",
+          "blocker": "Dependency blocked",
+          "status": "at_risk"
+        }],
+        "risk_count": 1,
+        "risks": [{"entity": "Team A", "status": "at_risk"}]
+      }
+    }
+  }
+]
