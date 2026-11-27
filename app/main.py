@@ -26,7 +26,7 @@ class ApplicationEvent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     event_id: str = Field(default_factory=lambda: uuid.uuid4().hex, min_length=8, max_length=64)
-    project: Literal["evidenceflow", "quotesense"]
+    project: Literal["evidenceflow", "quotesense", "flowpilot"]
     event_type: Literal[
         "run.completed",
         "run.failed",
@@ -216,7 +216,7 @@ def ready():
 @app.get("/api/ai-quality")
 def ai_quality(limit: int = 200):
     data = quality_metrics(limit)
-    public_projects = {"evidenceflow", "quotesense"}
+    public_projects = {"evidenceflow", "quotesense", "flowpilot"}
     data["targets"] = {
         key: value for key, value in data.get("targets", {}).items()
         if key in public_projects
@@ -269,8 +269,8 @@ def ingest_application_event(
 
 @app.get("/api/application-events")
 def application_events(project: str | None = None, limit: int = 60):
-    if project is not None and project not in {"evidenceflow", "quotesense"}:
-        raise HTTPException(400, "project must be evidenceflow or quotesense")
+    if project is not None and project not in {"evidenceflow", "quotesense", "flowpilot"}:
+        raise HTTPException(400, "project must be evidenceflow, quotesense or flowpilot")
     return query_application_events(limit=limit, project=project)
 
 
@@ -278,7 +278,7 @@ def application_events(project: str | None = None, limit: int = 60):
 def application_summary():
     events = query_application_events(limit=1000)
     summary = {}
-    for project in ("evidenceflow", "quotesense"):
+    for project in ("evidenceflow", "quotesense", "flowpilot"):
         rows = [row for row in events if row["project"] == project]
         durations = [
             float(row["duration_ms"])
