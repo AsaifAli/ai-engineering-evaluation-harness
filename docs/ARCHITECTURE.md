@@ -36,8 +36,8 @@ The harness receives only the project slug, event type/status, workflow label, d
 
 The active service creates only application-event, replay-quality and evaluation-audit tables. Existing legacy tables are not dropped during an upgrade. Replay results remain distinct from app-reported runtime events so synthetic checks are not confused with live product performance.
 
-## Evaluation framework boundary
+## Evaluation framework and Claude boundary
 
-The evaluator is framework-neutral. It computes deterministic retrieval metrics from labeled fixtures and can normalize bounded scalar results exported by Ragas, DeepEval, TruLens or Phoenix. It does not install or execute those frameworks, call model providers, run LLM judges, or ingest raw prompts/answers/contexts. Framework imports are namespaced observations and do not alter gates or aggregate scores without an explicit pack change.
+RAGAS and DeepEval can be explicitly invoked through optional adapters using caller-configured evaluator instances. TruLens and Phoenix results can be imported as allowlisted scalar scores without adding their runtimes to the service. No framework result import receives raw prompts, answers, contexts, traces or credentials; imported scores are namespaced and do not change gates implicitly.
 
 Claude Managed Agents/Agent SDK execution and Claude-specific session/tool traces belong to the Claude runtime adapter. Only sanitized, provider-neutral evaluation outcomes may cross into this service. Agency OS retains authority over execution permissions, budgets, approvals, business state and audit.
