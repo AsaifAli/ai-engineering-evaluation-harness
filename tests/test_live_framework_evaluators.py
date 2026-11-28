@@ -11,7 +11,7 @@ class FakeRagasMetric:
 
     async def ascore(self, **sample):
         assert "sample_id" not in sample
-        score = 0.9 if "supported" in sample["response"] else 0.5
+        score = 0.9 if sample["response"].startswith("supported") else 0.5
         return SimpleNamespace(value=score, reason="fixture reason")
 
 
