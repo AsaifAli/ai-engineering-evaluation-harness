@@ -18,8 +18,8 @@ dependencies = [
 
 [project.optional-dependencies]
 eval-ragas = ["ragas>=0.4.4,<0.5"]
-eval-deepeval = ["deepeval>=4.2.6,<5"]
-eval-all = ["ragas>=0.4.4,<0.5", "deepeval>=4.2.6,<5"]
+eval-deepeval = ["deepeval>=4.3.6,<5"]
+eval-all = ["ragas>=0.4.4,<0.5", "deepeval>=4.3.6,<5"]
 test = ["pytest==9.0.3"]
 
 [tool.setuptools.packages.find]
