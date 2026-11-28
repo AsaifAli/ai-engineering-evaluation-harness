@@ -33,21 +33,10 @@ PYTHONPATH=. python -m evals.project_runner --target flowpilot --mode replay
 
 
 Results are stored by batch and exposed through GET /api/ai-quality. Public quality and activity APIs allowlist only these three current application references. Historical rows for retired projects remain in the database but are filtered from the client-facing snapshot.
-## Framework interoperability (score import, not framework execution)
+## Additional framework result interoperability
 
-The harness now includes a dependency-free score-import boundary for results produced by:
+The active `evals.frameworks` module provides opt-in execution adapters for RAGAS 0.4+ and DeepEval using caller-configured evaluator/model instances. The harness also provides a dependency-free score-import boundary for bounded scalar results from RAGAS, DeepEval, TruLens and Arize Phoenix. A replay fixture may include `actual.framework_scores` shaped as `{framework: {metric_name: score}}` (or `{ "score": number }`). Imported scores must be finite numeric values in [0, 1], and framework/metric names are allowlisted and namespaced as `external.<framework>.<canonical_metric>`.
 
-- **Ragas**: faithfulness, answer/response relevancy, context precision/recall, context entity recall, noise sensitivity, factual correctness, and selected agent/tool metrics.
-- **DeepEval**: faithfulness, answer relevancy, contextual relevancy, contextual precision and contextual recall.
-- **TruLens**: groundedness, context relevance and answer relevance.
-- **Arize Phoenix**: faithfulness, retrieval relevance, correctness and completeness.
+TruLens and Phoenix are score-import integrations only in this repository; their runtime/evaluator packages are not installed or invoked here. RAGAS/DeepEval judge execution remains opt-in through `evals.frameworks`, with caller-owned model and embedding configuration. The dashboard service itself remains provider-free. Imported framework results are observations: they do not alter the composite score or release gates unless a separately reviewed pack change explicitly opts them in.
 
-A replay fixture may optionally include an `actual.framework_scores` object, shaped as `{framework: {metric_name: score}}`. A metric may also be represented as `{ "score": number }`. Imported values must be finite numbers in the inclusive range 0–1; unknown frameworks/metrics, duplicate aliases, non-numeric values and oversized imports are rejected. Stored names are namespaced as `external.<framework>.<canonical_metric>`.
-
-This is intentionally an interoperability layer, not an embedded Ragas/DeepEval/TruLens/Phoenix runtime. The harness does not invoke LLM judges, embeddings, providers, or remote evaluation services; it does not receive prompts, answers, contexts or trace payloads. Third-party tools execute in their separately authorized environment and may export bounded scores for offline replay ingestion. Imported framework scores are observations only: they do not silently change the existing composite score or quality gates. Gate changes require an explicit reviewed change to the pack configuration and supporting fixtures.
-
-The RAG pack additionally computes deterministic, relevance-label-based `context_precision@K` (rank-aware average precision), `context_recall@K`, and `context_relevancy@K`. These do not claim to replace judge-based semantic metrics such as faithfulness or answer relevancy. No semantic score is fabricated when an external evaluator has not supplied one.
-
-## Claude and agent-runtime boundary
-
-Claude Managed Agents and Claude Agent SDK execution, session state, tool execution, model calls, and Claude-specific trace capture remain in the Claude runtime adapter/integration layer. This harness may evaluate provider-neutral, sanitized outcomes (for example, goal completion, tool-call correctness, trajectory quality, and policy-compliance scores) after that layer exports them. It must not create Claude sessions, invoke Claude tools, own runtime credentials, or become a second agent orchestrator. Agency OS remains authoritative for permissions, budgets, approvals, business state and audit records.
+Claude Managed Agents and Claude Agent SDK sessions, tool execution, model calls and Claude-specific trace capture remain in the Claude runtime adapter. This harness can evaluate only sanitized, provider-neutral outcomes exported by that layer. It must not create Claude sessions, invoke Claude tools, own runtime credentials or become another agent orchestrator. Agency OS remains authoritative for permissions, budgets, approvals, business state and audit.
