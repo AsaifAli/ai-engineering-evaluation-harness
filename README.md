@@ -203,7 +203,7 @@ The Render service URL is:
 
 `https://ai-engineering-evaluation-harness.onrender.com`
 
-The dashboard is intentionally read-only and does not require a provider key or user login. It shows the latest replay evaluation evidence separately from real application activity so fixture-based measurements are not confused with live application performance.
+The dashboard is intentionally read-only and does not require a provider key or user login. It keeps deterministic replay benchmarks, live external evaluator scores, deterministic product/runtime checks and ordinary application activity in separate views. The live evaluation table can be filtered by project and evaluator framework, searched by experiment/model/version/metric, and inspected alongside experiment lineage. A comparison view lets you select a baseline and inspect metric deltas without assuming that every lower metric value is a regression.
 
 ## API
 
@@ -322,6 +322,6 @@ The runtime reporting endpoints are read-only:
 - `GET /api/ai-quality/runtime?limit=60&project=evidenceflow` — per-run scores and aggregates.
 - `GET /api/ai-quality/runtime-experiments?target=evidenceflow&baseline_experiment_id=baseline` — model/prompt/dataset lineage comparisons and per-metric deltas.
 
-The dashboard displays runtime evaluator results separately from deterministic replay evidence and ordinary application activity. A missing result means no connected application has reported an evaluation event; it must not be interpreted as a zero score. Metric deltas are compared only when the same metric exists in both experiment groups. No synthetic composite score is inferred from unrelated metrics.
+The dashboard displays external framework scores separately from deterministic project/runtime checks, replay evidence and ordinary application activity. Currently, RAGAS is available as an opt-in EvidenceFlow background evaluator (disabled by default); QuoteSense and FlowPilot emit deterministic procurement/workflow checks. DeepEval, TruLens and Phoenix are supported at the harness score-import boundary but are not currently live emitters in the connected applications. A missing result means no connected evaluator has reported a score; it must not be interpreted as zero. Metric deltas compare only shared metric keys and are shown as directional changes rather than a universal regression verdict (for example, a lower risk-finding count may be better). No synthetic composite score is inferred from unrelated metrics.
 
 Database upgrades add nullable lineage columns to the existing application-events table and preserve historical rows. Existing application event producers remain compatible because all lineage fields are optional.
