@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 
 
 def test_ragas_agent_adapter_scores_structured_conversation_and_expected_tools(monkeypatch):
@@ -24,7 +26,7 @@ def test_ragas_agent_adapter_scores_structured_conversation_and_expected_tools(m
             self.name = name
             self.args = args or {}
 
-    class FakeToolMetric:
+    class FakeToolAccuracy:
         name = "ToolCallAccuracy"
 
         async def ascore(self, **kwargs):
@@ -36,12 +38,19 @@ def test_ragas_agent_adapter_scores_structured_conversation_and_expected_tools(m
             ]
             return SimpleNamespace(value=1.0, reason="all tool calls matched")
 
+    class FakeToolF1:
+        name = "ToolCallF1"
+
+        async def ascore(self, **kwargs):
+            assert len(kwargs["reference_tool_calls"]) == 2
+            return SimpleNamespace(value=0.9, reason="tool call F1")
+
     messages_module.HumanMessage = FakeMessage
     messages_module.AIMessage = FakeMessage
     messages_module.ToolMessage = FakeMessage
     messages_module.ToolCall = FakeToolCall
-    collections.ToolCallAccuracy = FakeToolMetric
-    collections.ToolCallF1 = FakeToolMetric
+    collections.ToolCallAccuracy = FakeToolAccuracy
+    collections.ToolCallF1 = FakeToolF1
     monkeypatch.setitem(sys.modules, "ragas", root)
     monkeypatch.setitem(sys.modules, "ragas.metrics", metrics_package)
     monkeypatch.setitem(sys.modules, "ragas.metrics.collections", collections)
@@ -63,6 +72,8 @@ def test_ragas_agent_adapter_scores_structured_conversation_and_expected_tools(m
     }))
     assert result["framework"] == "ragas"
     assert result["metrics"]["ToolCallAccuracy"]["score"] == 1.0
+    assert result["metrics"]["ToolCallF1"]["score"] == 0.9
+    assert result["metric_count"] == 2
 
 
 def test_ragas_agent_adapter_requires_structured_message_trace(monkeypatch):
