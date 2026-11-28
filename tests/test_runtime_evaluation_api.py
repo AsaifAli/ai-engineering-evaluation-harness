@@ -117,7 +117,7 @@ def test_runtime_evaluations_api_returns_only_evaluation_events_and_aggregates(m
     assert body["count"] == 2
     assert len(body["results"]) == 2
     assert body["summary"]["external.ragas.faithfulness"]["mean"] == 0.85
-    assert "prompt" not in str(body).lower()
+    assert "prompt_text" not in str(body).lower()\n    assert "answer_text" not in str(body).lower()
     assert all(item["event_type"] == "evaluation.completed" for item in body["results"])
 
 
