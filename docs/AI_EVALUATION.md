@@ -33,3 +33,10 @@ PYTHONPATH=. python -m evals.project_runner --target flowpilot --mode replay
 
 
 Results are stored by batch and exposed through GET /api/ai-quality. Public quality and activity APIs allowlist only these three current application references. Historical rows for retired projects remain in the database but are filtered from the client-facing snapshot.
+## Additional framework result interoperability
+
+The active `evals.frameworks` module provides opt-in execution adapters for RAGAS 0.4+ and DeepEval using caller-configured evaluator/model instances. The harness also provides a dependency-free score-import boundary for bounded scalar results from RAGAS, DeepEval, TruLens and Arize Phoenix. A replay fixture may include `actual.framework_scores` shaped as `{framework: {metric_name: score}}` (or `{ "score": number }`). Imported scores must be finite numeric values in [0, 1], and framework/metric names are allowlisted and namespaced as `external.<framework>.<canonical_metric>`.
+
+TruLens and Phoenix are score-import integrations only in this repository; their runtime/evaluator packages are not installed or invoked here. RAGAS/DeepEval judge execution remains opt-in through `evals.frameworks`, with caller-owned model and embedding configuration. The dashboard service itself remains provider-free. Imported framework results are observations: they do not alter the composite score or release gates unless a separately reviewed pack change explicitly opts them in.
+
+Claude Managed Agents and Claude Agent SDK sessions, tool execution, model calls and Claude-specific trace capture remain in the Claude runtime adapter. This harness can evaluate only sanitized, provider-neutral outcomes exported by that layer. It must not create Claude sessions, invoke Claude tools, own runtime credentials or become another agent orchestrator. Agency OS remains authoritative for permissions, budgets, approvals, business state and audit.

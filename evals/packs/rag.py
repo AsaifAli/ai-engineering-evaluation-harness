@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from .base import EvalPack
+from ..integrations.framework_scores import normalize_framework_scores
 from ..metrics import (
     citation_completeness, citation_correctness, contextual_precision_at_k,
     contextual_relevance, context_recall, ndcg_at_k, precision_at_k,
@@ -34,6 +35,7 @@ def evaluate(expected: dict[str, Any], actual: dict[str, Any]) -> dict[str, floa
         "faithfulness": float(actual.get("faithfulness", actual.get("groundedness", 0.0))),
         "groundedness": float(actual.get("groundedness", actual.get("faithfulness", 0.0))),
     }
+    metrics.update(normalize_framework_scores(actual.get("framework_scores", {})))
     for name, score in metrics.items():
         if not 0.0 <= score <= 1.0:
             raise ValueError(f"RAG metric {name} must be between 0 and 1")

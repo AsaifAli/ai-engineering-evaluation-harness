@@ -276,3 +276,9 @@ PYTHONPATH=. python -m pytest -q
 ```
 
 Replay results are reference measurements against synthetic fixtures. They are not live model benchmarks, customer data or client outcome claims.
+
+### TruLens and Phoenix score imports; Claude boundary
+
+TruLens and Arize Phoenix can export bounded scalar evaluation scores into the replay fixture `actual.framework_scores` field. Their runtime packages are not installed or invoked by this service. Imported scores are namespaced observations and do not alter existing gates or composite scores automatically. See `docs/AI_EVALUATION.md` for the accepted metric names and validation rules.
+
+Claude Managed Agents and Claude Agent SDK execution, sessions and Claude-specific tool/trace capture remain in the Claude runtime adapter. This harness evaluates only sanitized, provider-neutral outcomes exported by that layer; Agency OS retains authority over permissions, budgets, approvals, business state and audit.
