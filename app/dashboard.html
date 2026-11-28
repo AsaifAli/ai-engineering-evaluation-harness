@@ -172,8 +172,9 @@ function renderRuntimeEvaluations(payload){
 }
 function renderEvents(events){
  const body=$("activityTable");
- if(!events.length){body.innerHTML='<tr><td colspan="7" class="empty">No application events have been received yet.</td></tr>';return;}
- body.innerHTML=events.slice(0,60).map(event=>{
+ const activityEvents=events.filter(event=>event.event_type!=="evaluation.completed");
+ if(!activityEvents.length){body.innerHTML='<tr><td colspan="7" class="empty">No application run activity has been received yet.</td></tr>';return;}
+ body.innerHTML=activityEvents.slice(0,60).map(event=>{
   const metrics=Object.entries(event.metrics||{}).slice(0,4).map(([k,v])=>esc(k)+": "+esc(v)).join(" · ");
   return '<tr><td class="muted">'+esc(fmtTime(event.created_at))+'</td><td>'+esc(labelProject(event.project))+'</td><td>'+esc(event.workflow)+'</td><td><span class="pill '+statusClass(event.status)+'">'+esc(event.status)+'</span></td><td>'+esc(event.duration_ms==null?"—":Math.round(event.duration_ms)+" ms")+'</td><td class="muted">'+esc(event.model||"—")+'</td><td class="muted">'+(metrics||"—")+'</td></tr>';
  }).join("");
