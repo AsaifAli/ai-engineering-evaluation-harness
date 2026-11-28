@@ -101,6 +101,19 @@ def _existing_ai_quality_columns(conn) -> set[str]:
     return {row[1] for row in rows}
 
 
+
+def _existing_application_event_columns(conn) -> set[str]:
+    if DATABASE_URL:
+        rows = conn.execute(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_schema=? AND table_name=?",
+            (_SCHEMA, "application_events"),
+        ).fetchall()
+        return {row["column_name"] for row in rows}
+    rows = conn.execute("PRAGMA table_info(application_events)").fetchall()
+    return {row[1] for row in rows}
+
+
 def init_db() -> None:
     """Create the active tables only; never drop legacy tables or stored history."""
     with db() as conn:
@@ -125,6 +138,20 @@ def init_db() -> None:
             request_id TEXT,
             metrics TEXT NOT NULL
         )""")
+        # Add experiment lineage to existing app-event history without dropping
+        # or rewriting previously ingested telemetry.
+        event_columns = _existing_application_event_columns(conn)
+        event_migrations = {
+            "experiment_id": "ALTER TABLE application_events ADD COLUMN experiment_id TEXT",
+            "dataset_version": "ALTER TABLE application_events ADD COLUMN dataset_version TEXT",
+            "prompt_version": "ALTER TABLE application_events ADD COLUMN prompt_version TEXT",
+            "model_version": "ALTER TABLE application_events ADD COLUMN model_version TEXT",
+            "config_version": "ALTER TABLE application_events ADD COLUMN config_version TEXT",
+        }
+        for column, statement in event_migrations.items():
+            if column not in event_columns:
+                conn.execute(statement)
+
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_application_events_project_created "
             "ON application_events(project, created_at)"
@@ -180,13 +207,18 @@ def insert_application_event(
     model: str | None,
     request_id: str | None,
     metrics: Any,
+    experiment_id: str | None = None,
+    dataset_version: str | None = None,
+    prompt_version: str | None = None,
+    model_version: str | None = None,
+    config_version: str | None = None,
 ) -> bool:
     """Persist a bounded project event. Event IDs make retries idempotent."""
     with db() as conn:
         cursor = conn.execute(
             """INSERT INTO application_events
-            (id, created_at, project, event_type, status, workflow, duration_ms, model, request_id, metrics)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, created_at, project, event_type, status, workflow, duration_ms, model, request_id, metrics, experiment_id, dataset_version, prompt_version, model_version, config_version)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO NOTHING""",
             (
                 event_id,
@@ -199,6 +231,11 @@ def insert_application_event(
                 model,
                 request_id,
                 json.dumps(metrics or {}, allow_nan=False),
+                experiment_id,
+                dataset_version,
+                prompt_version,
+                model_version,
+                config_version,
             ),
         )
         return getattr(cursor, "rowcount", 0) == 1
