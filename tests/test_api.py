@@ -87,3 +87,47 @@ def test_dashboard_keeps_read_only_data_sources_independent():
     assert "Application summary temporarily unavailable" in response.text
     assert "HUB_API_KEY" not in response.text
     assert "No provider key required" in response.text
+
+
+def test_experiment_comparison_api_returns_aggregated_regression_report(monkeypatch):
+    monkeypatch.setattr(
+        main_module,
+        "quality_metrics",
+        lambda limit: {
+            "runs": [
+                {
+                    "experiment_id": "baseline",
+                    "target": "evidenceflow",
+                    "score": 0.9,
+                    "passed": True,
+                    "model_version": "model-a",
+                    "prompt_version": "p1",
+                    "metrics": {"faithfulness": 0.95},
+                },
+                {
+                    "experiment_id": "candidate",
+                    "target": "evidenceflow",
+                    "score": 0.8,
+                    "passed": False,
+                    "model_version": "model-b",
+                    "prompt_version": "p2",
+                    "metrics": {"faithfulness": 0.7},
+                },
+            ]
+        },
+    )
+    with TestClient(app) as client:
+        response = client.get(
+            "/api/ai-quality/experiments?target=evidenceflow&baseline_experiment_id=baseline"
+        )
+    assert response.status_code == 200
+    body = response.json()
+    candidate = next(row for row in body["experiments"] if row["experiment_id"] == "candidate")
+    assert candidate["regression_detected"] is True
+    assert candidate["metric_deltas"]["faithfulness"] == -0.25
+
+
+def test_experiment_comparison_api_rejects_unknown_project():
+    with TestClient(app) as client:
+        response = client.get("/api/ai-quality/experiments?target=unknown")
+    assert response.status_code == 400

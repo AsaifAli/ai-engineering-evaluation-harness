@@ -75,12 +75,12 @@ async def evaluate_with_ragas_async(sample: dict[str, Any], *, metrics: Iterable
 def evaluate_with_deepeval(sample: dict[str, Any], *,
                            metrics: Iterable[Any] | None = None) -> dict[str, Any]:
     """Evaluate one DeepEval LLMTestCase with caller-configured metrics/models."""
+    if metrics is None:
+        raise ValueError(
+            "Pass explicitly configured DeepEval metric instances; implicit default models are disabled"
+        )
     try:
         from deepeval.test_case import LLMTestCase
-        from deepeval.metrics import (
-            AnswerRelevancyMetric, FaithfulnessMetric, ContextualRelevancyMetric,
-            ContextualPrecisionMetric, ContextualRecallMetric,
-        )
     except ImportError as exc:
         raise RuntimeError("Install the optional extra: pip install -e '.[eval-deepeval]'") from exc
     test_case = LLMTestCase(
@@ -89,11 +89,6 @@ def evaluate_with_deepeval(sample: dict[str, Any], *,
         expected_output=sample.get("expected_output"),
         retrieval_context=sample.get("retrieval_context", []),
     )
-    if metrics is None:
-        configured = [AnswerRelevancyMetric(), FaithfulnessMetric(), ContextualRelevancyMetric()]
-        if sample.get("expected_output"):
-            configured.extend([ContextualPrecisionMetric(), ContextualRecallMetric()])
-        metrics = configured
     results: dict[str, Any] = {}
     for metric in metrics:
         metric.measure(test_case)

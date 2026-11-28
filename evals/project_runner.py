@@ -32,6 +32,7 @@ def run_target(
     prompt_version: str = "not-applicable",
     model_version: str = "replay-fixture-v1",
     config_version: str = HARNESS_CONFIG_VERSION,
+    experiment_id: str | None = None,
 ) -> dict[str, Any]:
     cases = load_cases(target)
     batch_id = str(uuid.uuid4())
@@ -61,7 +62,7 @@ def run_target(
             prompt_version=prompt_version,
             model_version=model_version,
             config_version=config_version,
-            experiment_id=None,
+            experiment_id=experiment_id,
         )
         results.append({
             "quality_id": quality_id,
@@ -82,6 +83,8 @@ def run_target(
         "dataset_version": dataset_version,
         "model_version": model_version,
         "config_version": config_version,
+        "prompt_version": prompt_version,
+        "experiment_id": experiment_id,
         "cases": len(results),
         "passed": sum(1 for result in results if result["passed"]),
         "avg_score": round(sum(result["score"] for result in results) / len(results), 6) if results else 0.0,
@@ -115,12 +118,14 @@ def main() -> None:
     parser.add_argument("--prompt-version", default="not-applicable")
     parser.add_argument("--model-version", default="replay-fixture-v1")
     parser.add_argument("--config-version", default="v1")
+    parser.add_argument("--experiment-id", default=None)
     args = parser.parse_args()
     kwargs = {
         "dataset_version": args.dataset_version,
         "prompt_version": args.prompt_version,
         "model_version": args.model_version,
         "config_version": args.config_version,
+        "experiment_id": args.experiment_id,
     }
     output = run_all(args.mode, **kwargs) if args.target == "all" else run_target(args.target, mode=args.mode, **kwargs)
     print(json.dumps(output, indent=2))

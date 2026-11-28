@@ -113,7 +113,7 @@ def test_replay_endpoint_is_rate_limited_per_operator_key(monkeypatch):
     monkeypatch.setattr(auth, "HUB_API_KEY", "operator-secret")
     monkeypatch.setattr(config, "HUB_RATE_LIMIT_PER_MINUTE", 1)
     monkeypatch.setattr(config, "HUB_IP_RATE_LIMIT_PER_MINUTE", 20)
-    monkeypatch.setattr(main, "run_all", lambda mode: {"mode": mode})
+    monkeypatch.setattr(main, "run_all", lambda mode, **kwargs: {"mode": mode, **kwargs})
     rate_limiter.clear()
 
     with TestClient(app) as client:
