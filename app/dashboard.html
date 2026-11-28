@@ -9,9 +9,9 @@
 :root{color-scheme:dark;--bg:#080d16;--panel:#101a29;--panel2:#142238;--line:#263750;--text:#edf4ff;--muted:#94a7c2;--soft:#637891;--cyan:#78d5ee;--violet:#b6a0ff;--green:#6de0a1;--amber:#f2c778;--red:#ff8794}
 *{box-sizing:border-box}
 body{margin:0;background:radial-gradient(950px 520px at 8% -12%,rgba(71,150,190,.15),transparent 62%),radial-gradient(820px 500px at 100% -15%,rgba(130,94,208,.13),transparent 60%),var(--bg);color:var(--text);font:14px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}
-a{color:var(--cyan);text-decoration:none}
-a:hover{text-decoration:underline}
-.shell{max-width:1320px;margin:0 auto;padding:26px 28px 46px}
+a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
+button,input,select{font:inherit}
+.shell{max-width:1440px;margin:0 auto;padding:26px 28px 46px}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:2px 0 20px;border-bottom:1px solid rgba(148,167,194,.14)}
 .brand{display:flex;align-items:center;gap:12px}.mark{width:40px;height:40px;display:grid;place-items:center;border-radius:13px;background:linear-gradient(145deg,rgba(120,213,238,.18),rgba(182,160,255,.2));border:1px solid rgba(120,213,238,.22);font-weight:850;letter-spacing:-.06em}
 .brand strong{display:block;font-size:14px;letter-spacing:.01em}.brand small{color:var(--muted);font-size:11px}
@@ -19,24 +19,59 @@ a:hover{text-decoration:underline}
 .hero{padding:34px 0 24px;display:flex;align-items:flex-end;justify-content:space-between;gap:25px}
 .kicker{font-size:10px;font-weight:800;letter-spacing:.17em;color:var(--cyan);text-transform:uppercase}
 h1{font-size:clamp(30px,4.3vw,48px);line-height:1.04;letter-spacing:-.05em;margin:9px 0 12px;max-width:780px}
-.lede{max-width:760px;color:var(--muted);font-size:14px;line-height:1.7;margin:0}
-.hero-note{min-width:215px;max-width:245px;border:1px solid rgba(109,224,161,.2);background:rgba(109,224,161,.045);border-radius:13px;padding:13px 15px}
+.lede{max-width:790px;color:var(--muted);font-size:14px;line-height:1.7;margin:0}
+.hero-note{min-width:215px;max-width:265px;border:1px solid rgba(109,224,161,.2);background:rgba(109,224,161,.045);border-radius:13px;padding:13px 15px}
 .hero-note strong{display:block;color:#c6f6d9;font-size:12px}.hero-note span{display:block;color:var(--muted);font-size:11px;margin-top:4px}
 .statusline{display:flex;gap:7px;align-items:center;margin-top:16px;color:var(--muted);font-size:11px}.dot{width:7px;height:7px;border-radius:50%;background:var(--soft);display:inline-block}.dot.good{background:var(--green)}.dot.warn{background:var(--amber)}.dot.bad{background:var(--red)}
 .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:3px 0 23px}
 .kpi,.panel,.app-card{border:1px solid var(--line);background:linear-gradient(180deg,rgba(17,28,44,.96),rgba(12,20,33,.96));border-radius:15px}
-.kpi{padding:15px 16px}.kpi-label{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase}.kpi-value{font-size:26px;font-weight:780;letter-spacing:-.04em;margin-top:5px}.kpi-sub{font-size:10px;color:var(--soft);margin-top:3px}
+.kpi{padding:15px 16px}.kpi-label{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase}.kpi-value{font-size:26px;font-weight:780;letter-spacing:-.04em;margin-top:5px}#lastActivity{font-size:clamp(17px,1.5vw,20px)}.kpi-sub{font-size:10px;color:var(--soft);margin-top:3px}
 .section{margin-top:22px}.sectionhead{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:11px}.sectionhead h2{font-size:17px;margin:0;letter-spacing:-.025em}.sectionhead p{color:var(--muted);font-size:11px;margin:3px 0 0}
 .apps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
 .app-card{padding:17px 18px;position:relative;overflow:hidden}.app-card:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--cyan)}.app-card.quote:before{background:var(--violet)}
 .app-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.app-head h3{font-size:15px;margin:0}.app-sub{font-size:11px;color:var(--muted);margin-top:3px}
-.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 8px;color:var(--muted);font-size:10px;white-space:nowrap}.pill.good{color:#b9f2d0;border-color:rgba(109,224,161,.25);background:rgba(109,224,161,.06)}.pill.warn{color:#f4d69a;border-color:rgba(242,199,120,.25);background:rgba(242,199,120,.06)}.pill.bad{color:#ffc0c7;border-color:rgba(255,135,148,.25);background:rgba(255,135,148,.06)}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 8px;color:var(--muted);font-size:10px;white-space:nowrap}
+.pill.good{color:#b9f2d0;border-color:rgba(109,224,161,.25);background:rgba(109,224,161,.06)}.pill.warn{color:#f4d69a;border-color:rgba(242,199,120,.25);background:rgba(242,199,120,.06)}.pill.bad{color:#ffc0c7;border-color:rgba(255,135,148,.25);background:rgba(255,135,148,.06)}
 .app-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:18px}.app-stat{padding-top:10px;border-top:1px solid rgba(148,167,194,.12)}.app-stat b{font-size:17px;display:block;letter-spacing:-.03em}.app-stat span{display:block;color:var(--soft);font-size:10px;margin-top:2px}
-.panel{overflow:hidden}.panel-inner{padding:16px 18px}.tablewrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:680px;font-size:11px}.table th,.table td{text-align:left;padding:10px 12px;border-bottom:1px solid rgba(148,167,194,.09);vertical-align:middle}.table th{color:var(--soft);text-transform:uppercase;letter-spacing:.09em;font-size:9px;font-weight:750}.table tr:last-child td{border-bottom:0}.table td{color:#dce8f8}.muted{color:var(--muted)!important}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.quality{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.quality-card{border:1px solid var(--line);border-radius:13px;padding:15px 16px;background:rgba(7,14,24,.35)}.quality-top{display:flex;align-items:center;justify-content:space-between;gap:10px}.quality-top strong{font-size:13px}.score{font-size:24px;font-weight:800;letter-spacing:-.04em}.metric-list{display:grid;gap:8px;margin-top:12px}.metric{display:grid;grid-template-columns:115px 1fr 45px;align-items:center;gap:9px;font-size:10px;color:var(--muted)}.bar{height:6px;background:#1e2c41;border-radius:99px;overflow:hidden}.bar span{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--violet));border-radius:99px}
+.panel{overflow:hidden}.panel-inner{padding:16px 18px}.tablewrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:760px;font-size:11px}
+.table th,.table td{text-align:left;padding:11px 12px;border-bottom:1px solid rgba(148,167,194,.09);vertical-align:top}
+.table th{color:var(--soft);text-transform:uppercase;letter-spacing:.09em;font-size:9px;font-weight:750;white-space:nowrap}.table tr:last-child td{border-bottom:0}.table td{color:#dce8f8}
+.muted{color:var(--muted)!important}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.quality{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.quality-card{border:1px solid var(--line);border-radius:13px;padding:15px 16px;background:rgba(7,14,24,.35)}
+.quality-top{display:flex;align-items:center;justify-content:space-between;gap:10px}.quality-top strong{font-size:13px}.score{font-size:24px;font-weight:800;letter-spacing:-.04em}
+.metric-list{display:grid;gap:8px;margin-top:12px}.metric{display:grid;grid-template-columns:115px 1fr 45px;align-items:center;gap:9px;font-size:10px;color:var(--muted)}
+.bar{height:6px;background:#1e2c41;border-radius:99px;overflow:hidden}.bar span{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--violet));border-radius:99px}
+.framework-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:11px}
+.framework-card{min-width:0;border:1px solid var(--line);background:linear-gradient(180deg,rgba(17,28,44,.9),rgba(12,20,33,.9));border-radius:13px;padding:14px}
+.framework-top{display:flex;justify-content:space-between;align-items:center;gap:7px}.framework-top strong{font-size:13px}
+.framework-card p{margin:8px 0 0;color:var(--muted);font-size:10px;line-height:1.55;min-height:46px}
+.framework-state{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:4px 7px;font-size:9px;color:var(--muted);white-space:nowrap}
+.framework-state.ready{color:#b9f2d0;border-color:rgba(109,224,161,.25);background:rgba(109,224,161,.06)}
+.framework-state.info{color:#d0c3ff;border-color:rgba(182,160,255,.25);background:rgba(182,160,255,.06)}
+.framework-state.wait{color:#f4d69a;border-color:rgba(242,199,120,.25);background:rgba(242,199,120,.06)}
+.coverage-foot{margin-top:10px;color:var(--soft);font-size:10px}
+.controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0}
+.control{height:34px;border:1px solid var(--line);background:#0c1523;color:var(--text);border-radius:8px;padding:0 10px;font-size:11px;min-width:145px}
+.control.search{min-width:210px;flex:1}
+.result-count{margin-left:auto;color:var(--soft);font-size:10px}
+.metric-groups{display:grid;gap:6px;min-width:210px;max-width:380px}
+.metric-group{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.metric-group-label{width:100%;font-size:9px;color:var(--soft);text-transform:uppercase;letter-spacing:.08em}
+.metric-chip{display:inline-flex;gap:4px;align-items:center;border:1px solid rgba(148,167,194,.16);background:rgba(148,167,194,.045);border-radius:7px;padding:4px 6px;font-size:9px;color:#d8e4f4;max-width:100%}
+.metric-chip b{color:var(--cyan);font-weight:700}.metric-chip.runtime b{color:var(--violet)}
+.lineage{display:grid;gap:4px;min-width:150px;font-size:10px;color:var(--muted)}
+.lineage span{overflow-wrap:anywhere}.lineage b{color:var(--soft);font-weight:600}
+.source-label{font-size:10px;color:#d9e7f8}.source-sub{font-size:9px;color:var(--soft);margin-top:3px}
+.experiment-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0}
+.delta-list{display:flex;flex-wrap:wrap;gap:5px;max-width:460px}
+.delta-chip{border:1px solid rgba(148,167,194,.16);border-radius:7px;padding:4px 6px;font-size:9px;color:var(--muted)}
+.baseline{color:#b9f2d0}.empty{padding:26px;text-align:center;color:var(--soft);font-size:11px}
 .note{border:1px solid rgba(120,213,238,.14);background:rgba(120,213,238,.035);padding:13px 15px;border-radius:12px;color:var(--muted);font-size:11px;line-height:1.6}
-.empty{padding:26px;text-align:center;color:var(--soft);font-size:11px}.footer{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:22px;color:var(--soft);font-size:10px}
-@media(max-width:880px){.hero{display:block}.hero-note{margin-top:17px;max-width:none}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.apps{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:650px){.shell{padding:18px 15px 34px}.toplink{display:none}.apps,.quality{grid-template-columns:1fr}.app-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.sectionhead{display:block}.kpis{gap:8px}.kpi{padding:12px}.kpi-value{font-size:22px}}
+.footer{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:22px;color:var(--soft);font-size:10px}
+@media(max-width:1080px){.framework-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:880px){.hero{display:block}.hero-note{margin-top:17px;max-width:none}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.apps{grid-template-columns:repeat(2,minmax(0,1fr))}.framework-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.shell{padding:18px 15px 34px}.toplink{display:none}.apps,.quality,.framework-grid{grid-template-columns:1fr}.app-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.sectionhead{display:block}.kpis{gap:8px}.kpi{padding:12px}.kpi-value{font-size:22px}.control,.control.search{min-width:0;width:100%}.result-count{margin-left:0;width:100%}.table{min-width:900px}}
 </style>
 </head>
 <body>
@@ -53,7 +88,7 @@ h1{font-size:clamp(30px,4.3vw,48px);line-height:1.04;letter-spacing:-.05em;margi
     <div>
       <div class="kicker">Engineering assurance / internal evaluation</div>
       <h1>Evidence behind the AI systems.</h1>
-      <p class="lede">A read-only view of the quality signals and runtime activity reported by EvidenceFlow, QuoteSense and FlowPilot. This is the engineering layer behind the demonstrations—not another product or user workspace.</p>
+      <p class="lede">A read-only view of replay benchmarks and the quality signals reported by EvidenceFlow, QuoteSense and FlowPilot. Framework judge scores are kept distinct from deterministic product checks, so a metric is never presented as a score from an evaluator that did not run.</p>
       <div class="statusline"><span id="serviceDot" class="dot"></span><span id="serviceStatus">Checking service…</span><span>·</span><span id="lastRefresh">Waiting for first refresh</span></div>
     </div>
     <div class="hero-note"><strong>No provider key required</strong><span>Client inspection is read-only. Project services send bounded telemetry; this dashboard never requests BYOK credentials or starts model runs.</span></div>
@@ -67,7 +102,7 @@ h1{font-size:clamp(30px,4.3vw,48px);line-height:1.04;letter-spacing:-.05em;margi
   </section>
 
   <section class="section">
-    <div class="sectionhead"><div><h2>Connected engineering references</h2><p>Application telemetry is reported internally by each deployed service.</p></div></div>
+    <div class="sectionhead"><div><h2>Connected engineering references</h2><p>Application activity is reported by each deployed service and remains separate from evaluation events.</p></div></div>
     <div class="apps">
       <article class="app-card">
         <div class="app-head"><div><h3>EvidenceFlow</h3><div class="app-sub">Verified RAG · evidence-grounded research</div></div><span id="evidenceStatus" class="pill">Awaiting events</span></div>
@@ -100,13 +135,47 @@ h1{font-size:clamp(30px,4.3vw,48px);line-height:1.04;letter-spacing:-.05em;margi
   </section>
 
   <section class="section">
-    <div class="sectionhead"><div><h2>Replay evaluation evidence</h2><p>Deterministic fixture-based checks, shown separately from live application activity.</p></div></div>
+    <div class="sectionhead"><div><h2>Replay evaluation evidence</h2><p>Deterministic fixture-based checks, shown separately from live application activity and external framework judges.</p></div></div>
     <div class="quality" id="qualityCards"><div class="panel"><div class="empty">Loading evaluation results…</div></div></div>
   </section>
 
   <section class="section">
-    <div class="sectionhead"><div><h2>Live evaluation results</h2><p>Scores explicitly reported by connected applications; separated from synthetic replay fixtures.</p></div></div>
-    <div class="panel"><div class="tablewrap"><table class="table"><thead><tr><th>Time</th><th>Application</th><th>Experiment</th><th>Model</th><th>Dataset / prompt</th><th>Framework scores</th></tr></thead><tbody id="runtimeEvaluationTable"><tr><td colspan="6" class="empty">No live framework evaluation has been reported yet.</td></tr></tbody></table></div></div>
+    <div class="sectionhead"><div><h2>Evaluation framework coverage</h2><p>What is connected, what is optional, and what the harness can import—without implying that every framework is running on every project.</p></div></div>
+    <div class="framework-grid" id="frameworkCoverage">
+      <article class="framework-card"><div class="framework-top"><strong>Core metrics</strong><span class="framework-state ready">Connected</span></div><p>Deterministic RAG, procurement and workflow checks across the three application projects.</p></article>
+      <article class="framework-card"><div class="framework-top"><strong>RAGAS</strong><span class="framework-state wait" id="ragasCoverage">Opt-in · awaiting score</span></div><p>Optional EvidenceFlow runtime judge for faithfulness and context precision. Disabled by default until configured.</p></article>
+      <article class="framework-card"><div class="framework-top"><strong>DeepEval</strong><span class="framework-state info" id="deepevalCoverage">Import adapter</span></div><p>Harness score-import adapter. DeepEval metrics are not currently emitted by a connected project runtime.</p></article>
+      <article class="framework-card"><div class="framework-top"><strong>TruLens</strong><span class="framework-state info" id="trulensCoverage">Import adapter</span></div><p>Accepts normalized external scores; no connected project runtime currently emits TruLens results.</p></article>
+      <article class="framework-card"><div class="framework-top"><strong>Phoenix</strong><span class="framework-state info" id="phoenixCoverage">Import adapter</span></div><p>Accepts normalized external scores; no connected project runtime currently emits Phoenix results.</p></article>
+    </div>
+    <div class="coverage-foot">Framework adapters validate scores supplied by an explicitly configured evaluator. They do not silently create provider clients, infer credentials, or run judges by themselves.</div>
+  </section>
+
+  <section class="section">
+    <div class="sectionhead"><div><h2>Live evaluation results</h2><p>External judge scores and deterministic runtime/domain checks are displayed in separate columns.</p></div></div>
+    <div class="controls" aria-label="Live evaluation filters">
+      <select id="runtimeProjectFilter" class="control" aria-label="Filter by project">
+        <option value="all">All projects</option><option value="evidenceflow">EvidenceFlow</option><option value="quotesense">QuoteSense</option><option value="flowpilot">FlowPilot</option>
+      </select>
+      <select id="runtimeFrameworkFilter" class="control" aria-label="Filter by evaluator">
+        <option value="all">All evaluation sources</option><option value="native">Deterministic checks</option><option value="ragas">RAGAS</option><option value="deepeval">DeepEval</option><option value="trulens">TruLens</option><option value="phoenix">Phoenix</option>
+      </select>
+      <input id="runtimeSearch" class="control search" type="search" placeholder="Search experiment, model, dataset or metric" aria-label="Search evaluation results">
+      <span id="runtimeResultsCount" class="result-count" aria-live="polite">Loading live evaluations…</span>
+    </div>
+    <div class="panel"><div class="tablewrap"><table class="table"><thead><tr><th>Time</th><th>Application / workflow</th><th>Evaluator source</th><th>Experiment</th><th>Model</th><th>Dataset / prompt / config</th><th>Framework scores</th><th>Runtime / domain checks</th></tr></thead><tbody id="runtimeEvaluationTable"><tr><td colspan="8" class="empty">No live evaluation has been reported yet.</td></tr></tbody></table></div></div>
+  </section>
+
+  <section class="section">
+    <div class="sectionhead"><div><h2>Experiment history &amp; comparisons</h2><p>Compare metric snapshots by project and experiment version. Deltas are directional only: a lower count can be better for risk metrics, while lower coverage or faithfulness is usually worse.</p></div></div>
+    <div class="experiment-controls">
+      <select id="experimentProjectFilter" class="control" aria-label="Experiment project">
+        <option value="evidenceflow">EvidenceFlow</option><option value="quotesense">QuoteSense</option><option value="flowpilot">FlowPilot</option>
+      </select>
+      <select id="baselineExperimentFilter" class="control" aria-label="Baseline experiment"><option value="">Loading experiment baselines…</option></select>
+      <span id="experimentResultsCount" class="result-count" aria-live="polite">Loading experiment history…</span>
+    </div>
+    <div class="panel"><div class="tablewrap"><table class="table"><thead><tr><th>Experiment</th><th>Runs</th><th>Composite score (when supplied)</th><th>Change vs baseline</th><th>Version lineage</th><th>Metric deltas</th></tr></thead><tbody id="experimentComparisonTable"><tr><td colspan="6" class="empty">Loading experiment comparisons…</td></tr></tbody></table></div></div>
   </section>
 
   <section class="section">
@@ -114,7 +183,7 @@ h1{font-size:clamp(30px,4.3vw,48px);line-height:1.04;letter-spacing:-.05em;margi
     <div class="panel"><div class="tablewrap"><table class="table"><thead><tr><th>Time</th><th>Application</th><th>Workflow</th><th>Status</th><th>Duration</th><th>Model</th><th>Signals</th></tr></thead><tbody id="activityTable"><tr><td colspan="7" class="empty">Waiting for application events…</td></tr></tbody></table></div></div>
   </section>
 
-  <section class="section"><div class="note"><strong style="color:var(--text)">How to read this page.</strong> Application activity is reported by the connected services when work completes. Replay evaluations are controlled reference tests against versioned synthetic fixtures; they are not customer data, production accuracy claims or live model benchmarks. Empty activity means the relevant service has not yet been configured to report events or has not completed a new run.</div></section>
+  <section class="section"><div class="note"><strong style="color:var(--text)">How to read this page.</strong> Replay evaluations use controlled reference fixtures. Live framework scores are emitted only when an evaluator actually runs; currently, RAGAS is an opt-in EvidenceFlow integration. QuoteSense and FlowPilot report deterministic product/runtime checks. DeepEval, TruLens and Phoenix can be imported by the harness, but are not currently connected as live runtime emitters. Empty results are not zero scores. The comparison view shows signed metric movement, not an automatic quality verdict.</div></section>
 
   <footer class="footer"><span>AI Engineering Studio · Internal evaluation service</span><span id="refreshFooter">Read-only client view · auto-refresh every 20 seconds</span></footer>
 </div>
@@ -124,7 +193,11 @@ const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt
 const fmt=value=>value==null||value===""?"—":value;
 const fmtTime=value=>{if(!value)return"—";const d=new Date(value);return Number.isNaN(d.getTime())?String(value):d.toLocaleString([], {month:"short",day:"2-digit",hour:"2-digit",minute:"2-digit"});};
 const statusClass=status=>status==="success"?"good":status==="failed"?"bad":"warn";
-const labelProject=project=>project==="flowpilot"?"FlowPilot":project==="evidenceflow"?"EvidenceFlow":"QuoteSense";
+const labelProject=project=>project==="flowpilot"?"FlowPilot":project==="evidenceflow"?"EvidenceFlow":project==="quotesense"?"QuoteSense":String(project||"Unknown");
+const frameworkLabels={ragas:"RAGAS",deepeval:"DeepEval",trulens:"TruLens",phoenix:"Phoenix"};
+const metricRatioHints=["coverage","completeness","rate","accuracy","compliance","verified","completion","precision","recall","relevancy","relevance","grounding","f1","match_rate","comparability","integrity","supported"];
+let runtimeRows=[];
+
 function setPill(id,status){
  const el=$(id);el.className="pill "+(status==="success"?"good":status==="failed"?"bad":status==="warning"?"warn":"");
  el.textContent=status==="success"?"Reporting normally":status==="failed"?"Recent failure":status==="warning"?"Needs attention":"Awaiting events";
@@ -153,22 +226,111 @@ function renderQuality(payload){
  }).join("");
  $("qualityCards").innerHTML=cards;
 }
-function renderRuntimeEvaluations(payload){
+function externalFramework(metricName){
+ const parts=String(metricName).split(".");
+ return parts.length>=3&&parts[0]==="external"?parts[1]:null;
+}
+function metricLabel(name){
+ return String(name).replace(/^external\.[^.]+\./,"").replace(/^(runtime|retrieval|evidence|procurement)\./,"").replace(/[._]/g," ");
+}
+function isCountMetric(name){
+ const key=String(name).toLowerCase();
+ return key.endsWith("_count")||key.endsWith(".count");
+}
+function isRatioMetric(name){
+ const key=String(name).toLowerCase();
+ return !isCountMetric(key)&&metricRatioHints.some(hint=>key.includes(hint));
+}
+function formatMetric(name,value,isExternal){
+ if(typeof value==="boolean")return value?"Yes":"No";
+ const number=Number(value);
+ if(!Number.isFinite(number))return String(value);
+ if(isCountMetric(name))return Number.isInteger(number)?String(number):number.toFixed(2);
+ if(isExternal)return (number*100).toFixed(1)+"%";
+ if(isRatioMetric(name)&&number>=0&&number<=1)return (number*100).toFixed(1)+"%";
+ if(Number.isInteger(number))return String(number);
+ return number.toFixed(3).replace(/0+$/,"").replace(/\.$/,"");
+}
+function metricChip(name,value,isExternal){
+ const label=metricLabel(name);
+ return '<span class="metric-chip '+(isExternal?"":"runtime")+'"><b>'+esc(label)+'</b> '+esc(formatMetric(name,value,isExternal))+'</span>';
+}
+function metricGroup(entries,label,isExternal){
+ if(!entries.length)return "";
+ const chips=entries.slice(0,10).map(([name,value])=>metricChip(name,value,isExternal)).join("");
+ const extra=entries.length>10?'<span class="metric-chip">+'+(entries.length-10)+' more</span>':"";
+ return '<div class="metric-group"><span class="metric-group-label">'+esc(label)+'</span>'+chips+extra+'</div>';
+}
+function rowFrameworks(metrics){
+ return [...new Set(Object.keys(metrics).map(externalFramework).filter(Boolean))];
+}
+function updateFrameworkCoverage(rows){
+ const counts={ragas:0,deepeval:0,trulens:0,phoenix:0};
+ rows.forEach(row=>Object.keys(row.metrics||{}).forEach(key=>{
+  const framework=externalFramework(key);
+  if(framework&&Object.prototype.hasOwnProperty.call(counts,framework))counts[framework]+=1;
+ }));
+ for(const [framework,count] of Object.entries(counts)){
+  const node=$(framework+"Coverage");
+  if(count){
+   node.className="framework-state ready";
+   node.textContent=count+" score signal"+(count===1?"":"s")+" received";
+  }else if(framework==="ragas"){
+   node.className="framework-state wait";
+   node.textContent="Opt-in · awaiting score";
+  }else{
+   node.className="framework-state info";
+   node.textContent="Import adapter";
+  }
+ }
+}
+function applyRuntimeFilters(){
+ const project=$("runtimeProjectFilter").value;
+ const framework=$("runtimeFrameworkFilter").value;
+ const query=$("runtimeSearch").value.trim().toLowerCase();
+ const filtered=runtimeRows.map(item=>{
+  if(project!=="all"&&item.project!==project)return null;
+  const metrics=item.metrics||{};
+  const entries=Object.entries(metrics);
+  const selectedEntries=framework==="all"?entries:framework==="native"
+   ?entries.filter(([key])=>!externalFramework(key))
+   :entries.filter(([key])=>externalFramework(key)===framework);
+  if(framework!=="all"&&!selectedEntries.length)return null;
+  if(query){
+   const searchable=[item.project,item.workflow,item.experiment_id,item.model,item.model_version,item.dataset_version,item.prompt_version,item.config_version,...entries.map(([key])=>key)].join(" ").toLowerCase();
+   if(!searchable.includes(query))return null;
+  }
+  return {...item,metrics:Object.fromEntries(selectedEntries)};
+ }).filter(Boolean);
+ renderRuntimeRows(filtered);
+}
+function renderRuntimeRows(rows){
  const body=$("runtimeEvaluationTable");
- const rows=Array.isArray(payload?.results)?payload.results:[];
+ $("runtimeResultsCount").textContent=rows.length+" evaluation event"+(rows.length===1?"":"s");
  if(!rows.length){
-  body.innerHTML='<tr><td colspan="6" class="empty">No live framework evaluation has been reported yet. Enable an evaluator in the connected application to populate this view.</td></tr>';
+  body.innerHTML='<tr><td colspan="8" class="empty">No evaluation events match these filters. Empty results are not zero scores.</td></tr>';
   return;
  }
- body.innerHTML=rows.slice(0,60).map(item=>{
-  const metrics=Object.entries(item.metrics||{}).slice(0,6).map(([key,value])=>{
-   const numeric=Number(value);
-   const label=Number.isFinite(numeric)&&numeric>=0&&numeric<=1?(numeric*100).toFixed(1)+"%":String(value);
-   return esc(key)+": "+esc(label);
-  }).join(" · ");
-  const versions=[item.dataset_version,item.prompt_version].filter(Boolean).map(esc).join(" / ");
-  return '<tr><td class="muted">'+esc(fmtTime(item.created_at))+'</td><td>'+esc(labelProject(item.project))+'</td><td>'+esc(item.experiment_id||"—")+'</td><td class="muted">'+esc(item.model_version||item.model||"—")+'</td><td class="muted">'+(versions||"—")+'</td><td class="muted">'+(metrics||"—")+'</td></tr>';
+ body.innerHTML=rows.slice(0,100).map(item=>{
+  const metrics=item.metrics||{};
+  const external=Object.entries(metrics).filter(([key])=>externalFramework(key));
+  const runtime=Object.entries(metrics).filter(([key])=>!externalFramework(key));
+  const frameworks=rowFrameworks(metrics);
+  const sources=frameworks.length?frameworks.map(key=>frameworkLabels[key]||key).join(", "):"Deterministic checks";
+  const sourceSub=frameworks.length?"External judge score"+(frameworks.length===1?"":"s")+" present":"Application-emitted runtime metrics";
+  const lineage=[
+   ["dataset",item.dataset_version],["prompt",item.prompt_version],["config",item.config_version]
+  ].filter(entry=>entry[1]);
+  const lineageHtml=lineage.length?lineage.map(([label,value])=>'<span><b>'+label+':</b> '+esc(value)+'</span>').join(""):'<span>Lineage not supplied</span>';
+  const externalHtml=external.length?metricGroup(external,"Framework scores",true):'<span class="muted">No external judge score</span>';
+  const runtimeHtml=runtime.length?metricGroup(runtime,"Runtime / domain checks",false):'<span class="muted">No deterministic signals</span>';
+  return '<tr><td class="muted">'+esc(fmtTime(item.created_at))+'</td><td><strong>'+esc(labelProject(item.project))+'</strong><div class="source-sub">'+esc(item.workflow||"—")+'</div></td><td><div class="source-label">'+esc(sources)+'</div><div class="source-sub">'+esc(sourceSub)+'</div></td><td class="mono">'+esc(item.experiment_id||"—")+'</td><td><div>'+esc(item.model_version||item.model||"—")+'</div><div class="source-sub">'+esc(item.model&&item.model_version&&item.model!==item.model_version?"Reported model: "+item.model:"")+'</div></td><td><div class="lineage">'+lineageHtml+'</div></td><td><div class="metric-groups">'+externalHtml+'</div></td><td><div class="metric-groups">'+runtimeHtml+'</div></td></tr>';
  }).join("");
+}
+function renderRuntimeEvaluations(payload){
+ runtimeRows=Array.isArray(payload?.results)?payload.results:[];
+ updateFrameworkCoverage(runtimeRows);
+ applyRuntimeFilters();
 }
 function renderEvents(events){
  const body=$("activityTable");
@@ -179,9 +341,63 @@ function renderEvents(events){
   return '<tr><td class="muted">'+esc(fmtTime(event.created_at))+'</td><td>'+esc(labelProject(event.project))+'</td><td>'+esc(event.workflow)+'</td><td><span class="pill '+statusClass(event.status)+'">'+esc(event.status)+'</span></td><td>'+esc(event.duration_ms==null?"—":Math.round(event.duration_ms)+" ms")+'</td><td class="muted">'+esc(event.model||"—")+'</td><td class="muted">'+(metrics||"—")+'</td></tr>';
  }).join("");
 }
-async function get(path){const response=await fetch(path,{cache:"no-store"});if(!response.ok)throw new Error(path+" returned "+response.status);return response.json();}
+function deltaText(name,value){
+ const numeric=Number(value);
+ if(!Number.isFinite(numeric))return String(value);
+ if(name.startsWith("external.")||isRatioMetric(name))return (numeric>=0?"+":"")+(numeric*100).toFixed(1)+" pp";
+ return (numeric>=0?"+":"")+numeric.toFixed(3).replace(/0+$/,"").replace(/\.$/,"");
+}
+function renderExperimentComparisons(payload){
+ const rows=Array.isArray(payload?.experiments)?payload.experiments:[];
+ const body=$("experimentComparisonTable");
+ $("experimentResultsCount").textContent=rows.length+" experiment group"+(rows.length===1?"":"s");
+ if(!rows.length){
+  body.innerHTML='<tr><td colspan="6" class="empty">No experiment history is available for this project yet. Add experiment IDs or version lineage to new evaluations to make comparisons meaningful.</td></tr>';
+  return;
+ }
+ body.innerHTML=rows.map(item=>{
+  const lineage=item.lineage||{};
+  const versions=[["model",lineage.model_version],["dataset",lineage.dataset_version],["prompt",lineage.prompt_version],["config",lineage.config_version]].filter(x=>x[1]);
+  const versionsHtml=versions.length?versions.map(([k,v])=>'<span><b>'+k+':</b> '+esc(v)+'</span>').join(""):'<span>Version lineage not supplied</span>';
+  const deltas=Object.entries(item.metric_deltas||{}).slice(0,8).map(([name,value])=>'<span class="delta-chip">'+esc(metricLabel(name))+': '+esc(deltaText(name,value))+'</span>').join("");
+  const change=item.score_delta==null?"—":(Number(item.score_delta)>=0?"+":"")+(Number(item.score_delta)*100).toFixed(1)+" pp";
+  return '<tr><td class="mono">'+esc(item.experiment_id||"—")+(item.is_baseline?' <span class="pill good baseline">Baseline</span>':"")+'</td><td>'+esc(item.runs||0)+'</td><td>'+esc(item.score==null?"—":(Number(item.score)*100).toFixed(1)+"%")+'</td><td>'+esc(change)+'</td><td><div class="lineage">'+versionsHtml+'</div></td><td><div class="delta-list">'+(deltas||'<span class="muted">No shared metric keys</span>')+'</div></td></tr>';
+ }).join("");
+}
+async function get(path){
+ const response=await fetch(path,{cache:"no-store"});
+ if(!response.ok)throw new Error(path+" returned "+response.status);
+ return response.json();
+}
+async function loadExperimentComparisons(){
+ const target=$("experimentProjectFilter").value;
+ const baselineSelect=$("baselineExperimentFilter");
+ const baseUrl="/api/ai-quality/runtime-experiments?target="+encodeURIComponent(target);
+ try{
+  const initial=await get(baseUrl);
+  const experiments=Array.isArray(initial.experiments)?initial.experiments:[];
+  const previous=baselineSelect.value;
+  baselineSelect.innerHTML=experiments.map(item=>'<option value="'+esc(item.experiment_id)+'">'+esc(item.experiment_id)+'</option>').join("");
+  let baseline=experiments.some(item=>item.experiment_id===previous)?previous:(initial.baseline_experiment_id||"");
+  if(!experiments.length){
+   baselineSelect.innerHTML='<option value="">No experiment baseline available</option>';
+   renderExperimentComparisons(initial);
+   return;
+  }
+  baselineSelect.value=baseline;
+  if(baseline&&baseline!==initial.baseline_experiment_id){
+   const compared=await get(baseUrl+"&baseline_experiment_id="+encodeURIComponent(baseline));
+   renderExperimentComparisons(compared);
+  }else{
+   renderExperimentComparisons(initial);
+  }
+ }catch(error){
+  $("experimentResultsCount").textContent="Experiment data unavailable";
+  $("experimentComparisonTable").innerHTML='<tr><td colspan="6" class="empty">Experiment comparisons are temporarily unavailable.</td></tr>';
+ }
+}
 async function refresh(){
- const paths=["/api/application-summary","/api/application-events?limit=60","/api/ai-quality?limit=200","/api/ai-quality/runtime?limit=60"];
+ const paths=["/api/application-summary","/api/application-events?limit=60","/api/ai-quality?limit=200","/api/ai-quality/runtime?limit=100"];
  const results=await Promise.allSettled(paths.map(path=>get(path)));
  const [summaryResult,eventsResult,qualityResult,runtimeResult]=results;
  const summaryOk=summaryResult.status==="fulfilled"&&summaryResult.value&&typeof summaryResult.value==="object";
@@ -191,11 +407,7 @@ async function refresh(){
  const availableSources=[summaryOk,eventsOk,qualityOk,runtimeOk].filter(Boolean).length;
  const serviceHealthy=availableSources===4;
  $("serviceDot").className="dot "+(serviceHealthy?"good":"warn");
- $("serviceStatus").textContent=serviceHealthy
-  ? "All evaluation data sources responding"
-  : availableSources>0
-   ? "Partial evaluation data available"
-   : "Evaluation data temporarily unavailable";
+ $("serviceStatus").textContent=serviceHealthy?"All evaluation data sources responding":availableSources>0?"Partial evaluation data available":"Evaluation data temporarily unavailable";
 
  if(summaryOk){
   const summary=summaryResult.value;
@@ -214,45 +426,38 @@ async function refresh(){
   $("attentionRuns").textContent=attention;
   const allLast=[evidence.last_event_at,quote.last_event_at,flow.last_event_at].filter(Boolean).sort();
   $("lastActivity").textContent=allLast.length?fmtTime(allLast[allLast.length-1]):"—";
-  $("lastActivitySub").textContent=total
-   ? "Most recent event across the connected applications"
-   : "No application event received yet";
+  $("lastActivitySub").textContent=total?"Most recent event across the connected applications":"No application event received yet";
  }else{
   ["totalEvents","successfulRuns","attentionRuns","lastActivity"].forEach(id=>$(id).textContent="—");
   $("lastActivitySub").textContent="Application summary temporarily unavailable";
-  $("evidenceEvents").textContent=$("evidenceSuccess").textContent=$("evidenceFailed").textContent=$("evidenceLatency").textContent="—";
-  $("quoteEvents").textContent=$("quoteSuccess").textContent=$("quoteFailed").textContent=$("quoteLatency").textContent="—";
-  $("flowEvents").textContent=$("flowSuccess").textContent=$("flowFailed").textContent=$("flowLatency").textContent="—";
+  ["evidence","quote","flow"].forEach(prefix=>{
+   $(prefix+"Events").textContent=$(prefix+"Success").textContent=$(prefix+"Failed").textContent=$(prefix+"Latency").textContent="—";
+  });
  }
-
- if(eventsOk){
-  renderEvents(eventsResult.value);
- }else{
-  $("activityTable").innerHTML='<tr><td colspan="7" class="empty">Recent activity is temporarily unavailable. Aggregate counts may still be shown above.</td></tr>';
+ if(eventsOk)renderEvents(eventsResult.value);
+ else $("activityTable").innerHTML='<tr><td colspan="7" class="empty">Recent activity is temporarily unavailable. Aggregate counts may still be shown above.</td></tr>';
+ if(runtimeOk)renderRuntimeEvaluations(runtimeResult.value);
+ else{
+  runtimeRows=[];updateFrameworkCoverage(runtimeRows);applyRuntimeFilters();
+  $("runtimeEvaluationTable").innerHTML='<tr><td colspan="8" class="empty">Live evaluation results are temporarily unavailable.</td></tr>';
  }
-
- if(runtimeOk){
-  renderRuntimeEvaluations(runtimeResult.value);
- }else{
-  $("runtimeEvaluationTable").innerHTML='<tr><td colspan="6" class="empty">Live evaluation results are temporarily unavailable.</td></tr>';
- }
-
- if(qualityOk){
-  renderQuality(qualityResult.value);
- }else{
-  $("qualityCards").innerHTML='<div class="panel"><div class="empty">Replay evaluation results are temporarily unavailable.</div></div>';
- }
-
+ if(qualityOk)renderQuality(qualityResult.value);
+ else $("qualityCards").innerHTML='<div class="panel"><div class="empty">Replay evaluation results are temporarily unavailable.</div></div>';
  const stamp=new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"});
  const sourceFailures=results.filter(result=>result.status==="rejected").length;
  $("lastRefresh").textContent="Updated "+stamp+(sourceFailures?" · "+sourceFailures+" source(s) unavailable":"");
  $("refreshFooter").textContent="Read-only client view · auto-refresh every 20 seconds · last check "+stamp;
-
- if(sourceFailures){
-  console.warn("Some read-only evaluation data sources did not respond.");
- }
+ if(sourceFailures)console.warn("Some read-only evaluation data sources did not respond.");
 }
-refresh();setInterval(refresh,20000);
+$("runtimeProjectFilter").addEventListener("change",applyRuntimeFilters);
+$("runtimeFrameworkFilter").addEventListener("change",applyRuntimeFilters);
+$("runtimeSearch").addEventListener("input",applyRuntimeFilters);
+$("experimentProjectFilter").addEventListener("change",loadExperimentComparisons);
+$("baselineExperimentFilter").addEventListener("change",loadExperimentComparisons);
+refresh();
+loadExperimentComparisons();
+setInterval(refresh,20000);
+setInterval(loadExperimentComparisons,60000);
 </script>
 </body>
 </html>
