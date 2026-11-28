@@ -11,8 +11,7 @@ from typing import Any, Iterable
 
 def _normalize_result(value: Any) -> dict[str, Any]:
     if hasattr(value, "value"):
-        score = value.value
-        reason = getattr(value, "reason", None)
+        score, reason = value.value, getattr(value, "reason", None)
     else:
         score, reason = value, None
     if score is None:
@@ -33,7 +32,6 @@ def _ragas_metrics(sample: dict[str, Any], llm: Any, embeddings: Any, metrics: I
         )
     except ImportError as exc:
         raise RuntimeError("Install the optional extra: pip install -e '.[eval-ragas]'") from exc
-
     if metrics is not None:
         return list(metrics)
     if llm is None:
@@ -85,7 +83,6 @@ def evaluate_with_deepeval(sample: dict[str, Any], *,
         )
     except ImportError as exc:
         raise RuntimeError("Install the optional extra: pip install -e '.[eval-deepeval]'") from exc
-
     test_case = LLMTestCase(
         input=sample["input"],
         actual_output=sample["actual_output"],
@@ -97,7 +94,6 @@ def evaluate_with_deepeval(sample: dict[str, Any], *,
         if sample.get("expected_output"):
             configured.extend([ContextualPrecisionMetric(), ContextualRecallMetric()])
         metrics = configured
-
     results: dict[str, Any] = {}
     for metric in metrics:
         metric.measure(test_case)
