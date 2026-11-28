@@ -40,3 +40,46 @@ The active `evals.frameworks` module provides opt-in execution adapters for RAGA
 TruLens and Phoenix are score-import integrations only in this repository; their runtime/evaluator packages are not installed or invoked here. RAGAS/DeepEval judge execution remains opt-in through `evals.frameworks`, with caller-owned model and embedding configuration. The dashboard service itself remains provider-free. Imported framework results are observations: they do not alter the composite score or release gates unless a separately reviewed pack change explicitly opts them in.
 
 Claude Managed Agents and Claude Agent SDK sessions, tool execution, model calls and Claude-specific trace capture remain in the Claude runtime adapter. This harness can evaluate only sanitized, provider-neutral outcomes exported by that layer. It must not create Claude sessions, invoke Claude tools, own runtime credentials or become another agent orchestrator. Agency OS remains authoritative for permissions, budgets, approvals, business state and audit.
+
+
+## Runtime evaluation reporting
+
+Connected applications may send a separate `evaluation.completed` event after an explicitly enabled evaluator finishes. The event schema accepts only bounded numeric metrics and optional model/prompt/dataset/config version labels; the event cannot carry prompts, answers, retrieved passages, documents, agent traces or provider credentials.
+
+Optional lineage fields are:
+
+- `experiment_id`
+- `dataset_version`
+- `prompt_version`
+- `model_version`
+- `config_version`
+
+Example (scores only):
+
+```json
+{
+  "project": "evidenceflow",
+  "event_type": "evaluation.completed",
+  "status": "success",
+  "workflow": "rag_query",
+  "experiment_id": "support-rag-model-b-prompt-v4",
+  "dataset_version": "support-synthetic-v2",
+  "prompt_version": "synthesis-v4",
+  "model_version": "provider/model-b",
+  "config_version": "retrieval-v3",
+  "metrics": {
+    "external.ragas.faithfulness": 0.94,
+    "external.ragas.answer_relevancy": 0.91,
+    "external.ragas.context_precision": 0.88
+  }
+}
+```
+
+The runtime reporting endpoints are read-only:
+
+- `GET /api/ai-quality/runtime?limit=60&project=evidenceflow` — per-run scores and aggregates.
+- `GET /api/ai-quality/runtime-experiments?target=evidenceflow&baseline_experiment_id=baseline` — model/prompt/dataset lineage comparisons and per-metric deltas.
+
+The dashboard displays runtime evaluator results separately from deterministic replay evidence and ordinary application activity. A missing result means no connected application has reported an evaluation event; it must not be interpreted as a zero score. Metric deltas are compared only when the same metric exists in both experiment groups. No synthetic composite score is inferred from unrelated metrics.
+
+Database upgrades add nullable lineage columns to the existing application-events table and preserve historical rows. Existing application event producers remain compatible because all lineage fields are optional.

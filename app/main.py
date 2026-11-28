@@ -40,6 +40,11 @@ class ApplicationEvent(BaseModel):
     duration_ms: float | None = Field(default=None, ge=0, le=900000)
     model: str | None = Field(default=None, max_length=120)
     request_id: str | None = Field(default=None, max_length=100)
+    experiment_id: str | None = Field(default=None, min_length=1, max_length=128)
+    dataset_version: str | None = Field(default=None, min_length=1, max_length=128)
+    prompt_version: str | None = Field(default=None, min_length=1, max_length=128)
+    model_version: str | None = Field(default=None, min_length=1, max_length=128)
+    config_version: str | None = Field(default=None, min_length=1, max_length=128)
     metrics: dict[str, float | int | bool] = Field(default_factory=dict)
 
     @field_validator("metrics")
@@ -293,12 +298,117 @@ def ingest_application_event(
         model=payload.model,
         request_id=payload.request_id,
         metrics=payload.metrics,
+        experiment_id=payload.experiment_id,
+        dataset_version=payload.dataset_version,
+        prompt_version=payload.prompt_version,
+        model_version=payload.model_version,
+        config_version=payload.config_version,
     )
     return {
         "accepted": True,
         "event_id": payload.event_id,
         "duplicate": not inserted,
     }
+
+
+
+
+@app.get("/api/ai-quality/runtime")
+def runtime_evaluations(project: str | None = None, limit: int = 100):
+    if project is not None and project not in {"evidenceflow", "quotesense", "flowpilot"}:
+        raise HTTPException(400, "project must be evidenceflow, quotesense or flowpilot")
+    bounded_limit = max(1, min(int(limit), 1000))
+    rows = query_application_events(limit=bounded_limit, project=project)
+    evaluation_rows = [
+        row for row in rows
+        if row.get("event_type") == "evaluation.completed"
+        and row.get("project") in {"evidenceflow", "quotesense", "flowpilot"}
+    ]
+
+    metric_values: dict[str, list[float]] = {}
+    for row in evaluation_rows:
+        metrics = row.get("metrics") if isinstance(row.get("metrics"), dict) else {}
+        for name, value in metrics.items():
+            if (
+                isinstance(name, str)
+                and isinstance(value, (int, float))
+                and not isinstance(value, bool)
+                and float("-inf") < float(value) < float("inf")
+            ):
+                metric_values.setdefault(name, []).append(float(value))
+
+    summary = {
+        name: {
+            "samples": len(values),
+            "mean": round(sum(values) / len(values), 6),
+            "min": round(min(values), 6),
+            "max": round(max(values), 6),
+        }
+        for name, values in sorted(metric_values.items())
+        if values
+    }
+    public_fields = (
+        "id", "created_at", "project", "event_type", "status", "workflow",
+        "duration_ms", "model", "experiment_id", "dataset_version",
+        "prompt_version", "model_version", "config_version",
+    )
+    results = []
+    for row in evaluation_rows:
+        item = {field: row[field] for field in public_fields if row.get(field) is not None}
+        raw_metrics = row.get("metrics") if isinstance(row.get("metrics"), dict) else {}
+        item["metrics"] = {
+            name: value
+            for name, value in raw_metrics.items()
+            if isinstance(name, str)
+            and isinstance(value, (int, float))
+            and not isinstance(value, bool)
+            and float("-inf") < float(value) < float("inf")
+        }
+        results.append(item)
+    return {
+        "count": len(results),
+        "project": project,
+        "summary": summary,
+        "results": results,
+    }
+
+
+@app.get("/api/ai-quality/runtime-experiments")
+def runtime_evaluation_experiments(
+    target: str | None = None,
+    baseline_experiment_id: str | None = None,
+    limit: int = 1000,
+    regression_threshold: float = 0.02,
+):
+    if target is not None and target not in {"evidenceflow", "quotesense", "flowpilot"}:
+        raise HTTPException(400, "unknown evaluation target")
+    rows = query_application_events(limit=max(1, min(int(limit), 1000)), project=target)
+    evaluation_rows = []
+    for row in rows:
+        if row.get("event_type") != "evaluation.completed":
+            continue
+        metrics = row.get("metrics") if isinstance(row.get("metrics"), dict) else {}
+        evaluation_rows.append({
+            "created_at": row.get("created_at"),
+            "target": row.get("project"),
+            "experiment_id": row.get("experiment_id"),
+            "dataset_version": row.get("dataset_version"),
+            "prompt_version": row.get("prompt_version"),
+            "model_version": row.get("model_version"),
+            "config_version": row.get("config_version"),
+            "score": metrics.get("overall_score"),
+            "passed": row.get("status") != "failed",
+            "metrics": metrics,
+        })
+    try:
+        return compare_experiments(
+            evaluation_rows,
+            target=target,
+            baseline_experiment_id=baseline_experiment_id,
+            regression_threshold=regression_threshold,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from None
 
 
 @app.get("/api/application-events")
