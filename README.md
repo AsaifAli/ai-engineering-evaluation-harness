@@ -61,6 +61,29 @@ scores = await evaluate_with_ragas_async(
 )
 ```
 
+For real datasets, the batch helper runs the selected metrics for every sample and returns per-case results plus mean/min/max aggregates:
+
+```python
+from evals.frameworks import evaluate_ragas_dataset
+
+scores = await evaluate_ragas_dataset(
+    [
+        {
+            "id": "retention-001",
+            "user_input": "What is the retention period?",
+            "response": "Records are kept for seven years.",
+            "retrieved_contexts": ["The retention policy specifies seven years."],
+            "reference": "Records are retained for seven years.",
+        },
+        # More labelled, synthetic or redacted evaluation samples...
+    ],
+    llm=my_configured_ragas_llm,
+    embeddings=my_configured_embeddings,
+)
+```
+
+Reference-aware samples use Context Precision with reference, Context Recall and Answer Correctness. When the whole dataset has no reference answers, the adapter selects Context Precision without reference instead and omits reference-dependent metrics. A batch must consistently include references or consistently omit them.
+
 DeepEval:
 
 ```python
@@ -76,6 +99,57 @@ scores = evaluate_with_deepeval(
     metrics=my_configured_deepeval_metrics,
 )
 ```
+
+For FlowPilot-style agent tool evaluation, the helpers accept traced message/tool-call data and explicit DeepEval judge metrics:
+
+```python
+from evals.frameworks import (
+    evaluate_agent_tools_with_ragas,
+    evaluate_agent_tools_with_deepeval,
+)
+from deepeval.metrics import ToolCorrectnessMetric, ArgumentCorrectnessMetric
+
+# RAGAS ToolCallAccuracy + ToolCallF1 (native, no judge LLM required)
+ragas_agent_scores = await evaluate_agent_tools_with_ragas(
+    {
+        "user_input": [
+            {"role": "user", "content": "Find the retention policy."},
+            {
+                "role": "assistant",
+                "content": "Searching the policy index.",
+                "tool_calls": [
+                    {"name": "search_documents", "args": {"query": "retention policy"}}
+                ],
+            },
+            {"role": "tool", "content": "Found policy-v3."},
+            {"role": "assistant", "content": "The policy retains records for seven years."},
+        ],
+        "reference_tool_calls": [
+            {"name": "search_documents", "args": {"query": "retention policy"}}
+        ],
+    }
+)
+
+# DeepEval judges are created by the caller with its chosen model/provider.
+deepeval_agent_scores = evaluate_agent_tools_with_deepeval(
+    {
+        "input": "Find the retention policy.",
+        "actual_output": "The policy retains records for seven years.",
+        "tool_calls": [
+            {"tool": "search_documents", "arguments": {"query": "retention policy"}}
+        ],
+        "expected_tool_calls": [
+            {"tool": "search_documents", "arguments": {"query": "retention policy"}}
+        ],
+    },
+    metrics=[
+        ToolCorrectnessMetric(model=my_configured_deepeval_model),
+        ArgumentCorrectnessMetric(model=my_configured_deepeval_model),
+    ],
+)
+```
+
+The standalone helper evaluates a component-level tool-call decision. DeepEval's end-to-end Task Completion, Plan Adherence and Step Efficiency require a traced agent run; they should be attached to the actual agent/LLM spans with DeepEval tracing rather than inferred from a flattened tool-call list.
 
 Only pass synthetic or appropriately redacted samples to external judges. Do not transmit customer documents, chat transcripts, prompts, or business data without a privacy and data-processing review. Framework scores are returned to the caller and are not mixed into replay history or live application-event telemetry automatically.
 
