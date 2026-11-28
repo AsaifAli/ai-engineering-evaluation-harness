@@ -105,6 +105,11 @@ h1{font-size:clamp(30px,4.3vw,48px);line-height:1.04;letter-spacing:-.05em;margi
   </section>
 
   <section class="section">
+    <div class="sectionhead"><div><h2>Live evaluation results</h2><p>Scores explicitly reported by connected applications; separated from synthetic replay fixtures.</p></div></div>
+    <div class="panel"><div class="tablewrap"><table class="table"><thead><tr><th>Time</th><th>Application</th><th>Experiment</th><th>Model</th><th>Dataset / prompt</th><th>Framework scores</th></tr></thead><tbody id="runtimeEvaluationTable"><tr><td colspan="6" class="empty">No live framework evaluation has been reported yet.</td></tr></tbody></table></div></div>
+  </section>
+
+  <section class="section">
     <div class="sectionhead"><div><h2>Recent application activity</h2><p>Only event metadata and numeric metrics are recorded—never prompts, uploaded content, quotations or model responses.</p></div></div>
     <div class="panel"><div class="tablewrap"><table class="table"><thead><tr><th>Time</th><th>Application</th><th>Workflow</th><th>Status</th><th>Duration</th><th>Model</th><th>Signals</th></tr></thead><tbody id="activityTable"><tr><td colspan="7" class="empty">Waiting for application events…</td></tr></tbody></table></div></div>
   </section>
@@ -148,6 +153,23 @@ function renderQuality(payload){
  }).join("");
  $("qualityCards").innerHTML=cards;
 }
+function renderRuntimeEvaluations(payload){
+ const body=$("runtimeEvaluationTable");
+ const rows=Array.isArray(payload?.results)?payload.results:[];
+ if(!rows.length){
+  body.innerHTML='<tr><td colspan="6" class="empty">No live framework evaluation has been reported yet. Enable an evaluator in the connected application to populate this view.</td></tr>';
+  return;
+ }
+ body.innerHTML=rows.slice(0,60).map(item=>{
+  const metrics=Object.entries(item.metrics||{}).slice(0,6).map(([key,value])=>{
+   const numeric=Number(value);
+   const label=Number.isFinite(numeric)&&numeric>=0&&numeric<=1?(numeric*100).toFixed(1)+"%":String(value);
+   return esc(key)+": "+esc(label);
+  }).join(" · ");
+  const versions=[item.dataset_version,item.prompt_version].filter(Boolean).map(esc).join(" / ");
+  return '<tr><td class="muted">'+esc(fmtTime(item.created_at))+'</td><td>'+esc(labelProject(item.project))+'</td><td>'+esc(item.experiment_id||"—")+'</td><td class="muted">'+esc(item.model_version||item.model||"—")+'</td><td class="muted">'+(versions||"—")+'</td><td class="muted">'+(metrics||"—")+'</td></tr>';
+ }).join("");
+}
 function renderEvents(events){
  const body=$("activityTable");
  if(!events.length){body.innerHTML='<tr><td colspan="7" class="empty">No application events have been received yet.</td></tr>';return;}
@@ -158,14 +180,15 @@ function renderEvents(events){
 }
 async function get(path){const response=await fetch(path,{cache:"no-store"});if(!response.ok)throw new Error(path+" returned "+response.status);return response.json();}
 async function refresh(){
- const paths=["/api/application-summary","/api/application-events?limit=60","/api/ai-quality?limit=200"];
+ const paths=["/api/application-summary","/api/application-events?limit=60","/api/ai-quality?limit=200","/api/ai-quality/runtime?limit=60"];
  const results=await Promise.allSettled(paths.map(path=>get(path)));
- const [summaryResult,eventsResult,qualityResult]=results;
+ const [summaryResult,eventsResult,qualityResult,runtimeResult]=results;
  const summaryOk=summaryResult.status==="fulfilled"&&summaryResult.value&&typeof summaryResult.value==="object";
  const eventsOk=eventsResult.status==="fulfilled"&&Array.isArray(eventsResult.value);
  const qualityOk=qualityResult.status==="fulfilled"&&qualityResult.value&&typeof qualityResult.value==="object";
- const availableSources=[summaryOk,eventsOk,qualityOk].filter(Boolean).length;
- const serviceHealthy=availableSources===3;
+ const runtimeOk=runtimeResult.status==="fulfilled"&&runtimeResult.value&&typeof runtimeResult.value==="object";
+ const availableSources=[summaryOk,eventsOk,qualityOk,runtimeOk].filter(Boolean).length;
+ const serviceHealthy=availableSources===4;
  $("serviceDot").className="dot "+(serviceHealthy?"good":"warn");
  $("serviceStatus").textContent=serviceHealthy
   ? "All evaluation data sources responding"
@@ -205,6 +228,12 @@ async function refresh(){
   renderEvents(eventsResult.value);
  }else{
   $("activityTable").innerHTML='<tr><td colspan="7" class="empty">Recent activity is temporarily unavailable. Aggregate counts may still be shown above.</td></tr>';
+ }
+
+ if(runtimeOk){
+  renderRuntimeEvaluations(runtimeResult.value);
+ }else{
+  $("runtimeEvaluationTable").innerHTML='<tr><td colspan="6" class="empty">Live evaluation results are temporarily unavailable.</td></tr>';
  }
 
  if(qualityOk){
