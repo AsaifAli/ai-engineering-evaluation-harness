@@ -48,9 +48,9 @@ def test_rag_pack_computes_rank_aware_context_metrics_and_imports_external_score
         },
     )
 
-    assert metrics["context_precision@3"] == pytest.approx(0.583333, abs=1e-6)
-    assert metrics["context_recall@3"] == 1.0
-    assert metrics["context_relevancy@3"] == pytest.approx(2 / 3, abs=1e-6)
+    assert metrics["contextual_precision@3"] == pytest.approx(0.583333, abs=1e-6)
+    assert metrics["context_recall"] == 1.0
+    assert metrics["contextual_relevance"] == pytest.approx(2 / 3, abs=1e-6)
     assert metrics["external.ragas.faithfulness"] == 0.94
 
 
@@ -61,7 +61,7 @@ def test_rag_pack_does_not_invent_llm_judge_scores_when_missing():
     )
 
     assert "external.ragas.faithfulness" not in metrics
-    assert "faithfulness" not in metrics
+    # The core pack keeps its deterministic 0.0 baseline; no external judge score is fabricated.\n    assert metrics["faithfulness"] == 0.0\n    assert "external.ragas.faithfulness" not in metrics
 
 
 def test_external_framework_scores_are_observations_not_implicit_gate_inputs():
