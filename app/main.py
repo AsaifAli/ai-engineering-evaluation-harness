@@ -14,6 +14,7 @@ from .auth import require_hub_api_key, require_project_ingest_token
 from .rate_limit import RateLimitBackendUnavailable, rate_limiter
 from .db import init_db, insert_application_event, query_application_events, quality_metrics
 from evals.project_runner import TARGETS, run_all, run_target
+from evals.experiments import compare_experiments
 
 logger = logging.getLogger(__name__)
 
@@ -234,13 +235,46 @@ def ai_quality(limit: int = 200):
     return data
 
 
+@app.get("/api/ai-quality/experiments")
+def ai_quality_experiments(
+    target: str | None = None,
+    baseline_experiment_id: str | None = None,
+    limit: int = 1000,
+):
+    if target is not None and target not in TARGETS:
+        raise HTTPException(400, "unknown evaluation target")
+    data = quality_metrics(limit)
+    try:
+        return compare_experiments(
+            data.get("runs", []),
+            target=target,
+            baseline_experiment_id=baseline_experiment_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from None
+
+
 @app.post("/api/ai-quality/run", dependencies=[Depends(require_hub_api_key)])
-def run_replay_evaluation(target: str = "all"):
+def run_replay_evaluation(
+    target: str = "all",
+    dataset_version: str = "v1",
+    prompt_version: str = "not-applicable",
+    model_version: str = "replay-fixture-v1",
+    config_version: str = "v1",
+    experiment_id: str | None = None,
+):
+    metadata = {
+        "dataset_version": dataset_version,
+        "prompt_version": prompt_version,
+        "model_version": model_version,
+        "config_version": config_version,
+        "experiment_id": experiment_id,
+    }
     if target == "all":
-        return run_all("replay")
+        return run_all("replay", **metadata)
     if target not in TARGETS:
         raise HTTPException(404, "unknown evaluation target")
-    return run_target(target, mode="replay")
+    return run_target(target, mode="replay", **metadata)
 
 
 @app.post("/api/application-events", status_code=202)
