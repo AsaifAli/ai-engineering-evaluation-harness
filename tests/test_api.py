@@ -131,3 +131,65 @@ def test_experiment_comparison_api_rejects_unknown_project():
     with TestClient(app) as client:
         response = client.get("/api/ai-quality/experiments?target=unknown")
     assert response.status_code == 400
+
+
+def test_application_summary_excludes_runtime_evaluation_events_from_run_counts(monkeypatch):
+    events = [
+        {
+            "created_at": "2026-11-28T10:00:00+00:00",
+            "project": "evidenceflow",
+            "event_type": "run.completed",
+            "status": "success",
+            "workflow": "rag_query",
+            "duration_ms": 120,
+            "metrics": {"retrieved_chunks": 4},
+        },
+        {
+            "created_at": "2026-11-28T10:01:00+00:00",
+            "project": "evidenceflow",
+            "event_type": "evaluation.completed",
+            "status": "success",
+            "workflow": "rag_query",
+            "metrics": {"external.ragas.faithfulness": 0.94},
+        },
+        {
+            "created_at": "2026-11-28T10:02:00+00:00",
+            "project": "flowpilot",
+            "event_type": "run.failed",
+            "status": "failed",
+            "workflow": "outreach",
+            "duration_ms": 320,
+            "metrics": {},
+        },
+    ]
+    monkeypatch.setattr(main_module, "query_application_events", lambda limit, project=None: events)
+
+    with TestClient(app) as client:
+        response = client.get("/api/application-summary")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total_events"] == 2
+    assert body["projects"]["evidenceflow"]["events"] == 1
+    assert body["projects"]["evidenceflow"]["successful"] == 1
+    assert body["projects"]["flowpilot"]["events"] == 1
+    assert body["projects"]["flowpilot"]["failed"] == 1
+
+
+def test_application_event_history_keeps_runtime_evaluation_events(monkeypatch):
+    events = [{
+        "id": "eval-1",
+        "created_at": "2026-11-28T10:00:00+00:00",
+        "project": "evidenceflow",
+        "event_type": "evaluation.completed",
+        "status": "success",
+        "workflow": "rag_query",
+        "metrics": {"external.ragas.faithfulness": 0.94},
+    }]
+    monkeypatch.setattr(main_module, "query_application_events", lambda limit, project=None: events)
+
+    with TestClient(app) as client:
+        response = client.get("/api/application-events?limit=60")
+
+    assert response.status_code == 200
+    assert response.json()[0]["event_type"] == "evaluation.completed"
