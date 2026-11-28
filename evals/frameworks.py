@@ -26,14 +26,17 @@ def _normalize_result(value: Any) -> dict[str, Any]:
 
 
 def _ragas_metrics(sample: dict[str, Any], llm: Any, embeddings: Any, metrics: Iterable[Any] | None):
+    if metrics is not None:
+        configured = list(metrics)
+        if not configured:
+            raise ValueError("At least one RAGAS metric must be configured")
+        return configured
     try:
         from ragas.metrics.collections import (
             AnswerCorrectness, AnswerRelevancy, ContextPrecision, ContextRecall, Faithfulness
         )
     except ImportError as exc:
         raise RuntimeError("Install the optional extra: pip install -e '.[eval-ragas]'") from exc
-    if metrics is not None:
-        return list(metrics)
     if llm is None:
         raise ValueError("Pass a caller-configured RAGAS LLM or explicit metric instances")
     constructors = [Faithfulness, AnswerRelevancy, ContextPrecision, ContextRecall]
@@ -97,4 +100,160 @@ def evaluate_with_deepeval(sample: dict[str, Any], *,
             "reason": getattr(metric, "reason", None),
             "success": getattr(metric, "success", None),
         }
+    return results
+
+
+
+async def evaluate_ragas_dataset(
+    samples: Iterable[dict[str, Any]],
+    *,
+    metrics: Iterable[Any] | None = None,
+    llm: Any = None,
+    embeddings: Any = None,
+) -> dict[str, Any]:
+    """Score a batch of live RAG samples with RAGAS and return aggregate metrics.
+
+    Each sample uses the RAGAS collections schema: user_input, response,
+    retrieved_contexts, and optional reference/reference_contexts. The optional
+    id field is retained only as a result label and is never sent to a metric.
+    The caller owns model configuration, network access, data handling and costs.
+    """
+    batch = list(samples)
+    if not batch:
+        return {
+            "framework": "ragas",
+            "sample_count": 0,
+            "results": [],
+            "summary": {"metrics": {}},
+        }
+
+    required_fields = {"user_input", "response", "retrieved_contexts"}
+    prepared: list[tuple[str, dict[str, Any]]] = []
+    for index, sample in enumerate(batch, start=1):
+        if not isinstance(sample, dict):
+            raise ValueError(f"RAGAS sample {index} must be an object")
+        missing = sorted(required_fields - set(sample))
+        if missing:
+            raise ValueError(f"RAGAS sample {index} is missing required fields: {', '.join(missing)}")
+        if not isinstance(sample["user_input"], str) or not isinstance(sample["response"], str):
+            raise ValueError(f"RAGAS sample {index} user_input and response must be strings")
+        contexts = sample["retrieved_contexts"]
+        if not isinstance(contexts, list) or any(not isinstance(item, str) for item in contexts):
+            raise ValueError(f"RAGAS sample {index} retrieved_contexts must be a list of strings")
+        if "reference" in sample and sample["reference"] is not None and not isinstance(sample["reference"], str):
+            raise ValueError(f"RAGAS sample {index} reference must be a string")
+        case_id = str(sample.get("id") or f"case-{index}")
+        payload = {key: value for key, value in sample.items() if key not in {"id", "metadata"}}
+        prepared.append((case_id, payload))
+
+    metric_instances = _ragas_metrics(prepared[0][1], llm, embeddings, metrics)
+    case_results: list[dict[str, Any]] = []
+    aggregates: dict[str, list[float]] = {}
+    for case_id, payload in prepared:
+        scores: dict[str, Any] = {}
+        for metric in metric_instances:
+            name = str(getattr(metric, "name", None) or metric.__class__.__name__)
+            score = await metric.ascore(**payload)
+            normalized = _normalize_result(score)
+            scores[name] = normalized
+            aggregates.setdefault(name, []).append(normalized["score"])
+        case_results.append({"case_id": case_id, "metrics": scores})
+
+    summary = {
+        name: {
+            "mean": round(sum(values) / len(values), 6),
+            "min": round(min(values), 6),
+            "max": round(max(values), 6),
+            "samples": len(values),
+        }
+        for name, values in sorted(aggregates.items())
+        if values
+    }
+    return {
+        "framework": "ragas",
+        "sample_count": len(case_results),
+        "results": case_results,
+        "summary": {"metrics": summary},
+    }
+
+
+def _to_deepeval_tool_calls(values: Any, *, field_name: str, tool_call_type: Any) -> list[Any]:
+    if not isinstance(values, list):
+        raise ValueError(f"{field_name} must be a list")
+    converted = []
+    for index, value in enumerate(values, start=1):
+        if isinstance(value, str):
+            name = value.strip()
+            kwargs: dict[str, Any] = {"name": name}
+        elif isinstance(value, dict):
+            name = str(value.get("name") or value.get("tool") or value.get("tool_name") or "").strip()
+            if not name:
+                raise ValueError(f"{field_name}[{index}] is missing a tool name")
+            kwargs = {"name": name}
+            description = value.get("description")
+            if description is not None:
+                kwargs["description"] = str(description)
+            tool_input = value.get("input", value.get("arguments"))
+            if tool_input is not None:
+                kwargs["input"] = tool_input
+            if "output" in value:
+                kwargs["output"] = value["output"]
+        else:
+            raise ValueError(f"{field_name}[{index}] must be a string or object")
+        if not name:
+            raise ValueError(f"{field_name}[{index}] has an empty tool name")
+        converted.append(tool_call_type(**kwargs))
+    return converted
+
+
+def evaluate_agent_tools_with_deepeval(
+    sample: dict[str, Any],
+    *,
+    metrics: Iterable[Any] | None = None,
+) -> dict[str, Any]:
+    """Evaluate tool selection and argument decisions using explicit DeepEval metrics.
+
+    Sample fields: input, actual_output, tool_calls and expected_tool_calls.
+    Pass ToolCorrectnessMetric / ArgumentCorrectnessMetric instances configured
+    with the desired judge model. No default model or credential lookup occurs.
+    """
+    if metrics is None:
+        raise ValueError(
+            "Pass explicitly configured DeepEval metric instances; implicit default models are disabled"
+        )
+    configured_metrics = list(metrics)
+    if not configured_metrics:
+        raise ValueError("At least one explicitly configured DeepEval metric is required")
+    try:
+        from deepeval.test_case import LLMTestCase, ToolCall
+    except ImportError as exc:
+        raise RuntimeError("Install the optional extra: pip install -e '.[eval-deepeval]'") from exc
+
+    for field in ("input", "actual_output"):
+        if not isinstance(sample.get(field), str):
+            raise ValueError(f"DeepEval agent sample {field} must be a string")
+    tools_called = _to_deepeval_tool_calls(
+        sample.get("tool_calls", []),
+        field_name="tool_calls",
+        tool_call_type=ToolCall,
+    )
+    expected_tools = _to_deepeval_tool_calls(
+        sample.get("expected_tool_calls", []),
+        field_name="expected_tool_calls",
+        tool_call_type=ToolCall,
+    )
+    test_case = LLMTestCase(
+        input=sample["input"],
+        actual_output=sample["actual_output"],
+        tools_called=tools_called,
+        expected_tools=expected_tools,
+    )
+
+    results: dict[str, Any] = {}
+    for metric in configured_metrics:
+        metric.measure(test_case)
+        normalized = _normalize_result(metric.score)
+        normalized["reason"] = getattr(metric, "reason", normalized.get("reason"))
+        normalized["success"] = getattr(metric, "success", None)
+        results[metric.__class__.__name__] = normalized
     return results
