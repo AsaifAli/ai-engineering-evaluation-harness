@@ -32,16 +32,36 @@ def _ragas_metrics(sample: dict[str, Any], llm: Any, embeddings: Any, metrics: I
             raise ValueError("At least one RAGAS metric must be configured")
         return configured
     try:
-        from ragas.metrics.collections import (
-            AnswerCorrectness, AnswerRelevancy, ContextPrecision, ContextRecall, Faithfulness
-        )
+        from ragas.metrics import collections as ragas_collections
     except ImportError as exc:
         raise RuntimeError("Install the optional extra: pip install -e '.[eval-ragas]'") from exc
     if llm is None:
         raise ValueError("Pass a caller-configured RAGAS LLM or explicit metric instances")
-    constructors = [Faithfulness, AnswerRelevancy, ContextPrecision, ContextRecall]
-    if sample.get("reference"):
-        constructors.append(AnswerCorrectness)
+
+    def resolve(*names: str):
+        for name in names:
+            metric_type = getattr(ragas_collections, name, None)
+            if metric_type is not None:
+                return metric_type
+        raise RuntimeError(
+            "Installed RAGAS version is missing the expected metric class: " + " or ".join(names)
+        )
+
+    has_reference = sample.get("reference") is not None
+    constructors = [
+        resolve("Faithfulness"),
+        resolve("AnswerRelevancy"),
+    ]
+    if has_reference:
+        constructors.extend([
+            resolve("ContextPrecisionWithReference", "ContextPrecision"),
+            resolve("ContextRecall"),
+            resolve("AnswerCorrectness"),
+        ])
+    else:
+        constructors.append(
+            resolve("ContextPrecisionWithoutReference", "ContextUtilization")
+        )
     configured = []
     for constructor in constructors:
         kwargs = {"llm": llm}
@@ -146,6 +166,9 @@ async def evaluate_ragas_dataset(
         payload = {key: value for key, value in sample.items() if key not in {"id", "metadata"}}
         prepared.append((case_id, payload))
 
+    reference_presence = [payload.get("reference") is not None for _, payload in prepared]
+    if any(reference_presence) and not all(reference_presence):
+        raise ValueError("RAGAS samples must consistently include reference or omit it")
     metric_instances = _ragas_metrics(prepared[0][1], llm, embeddings, metrics)
     case_results: list[dict[str, Any]] = []
     aggregates: dict[str, list[float]] = {}
