@@ -24,3 +24,11 @@ def test_optional_framework_imports_are_lazy():
     import evals.frameworks as frameworks
     assert callable(frameworks.evaluate_with_ragas_async)
     assert callable(frameworks.evaluate_with_deepeval)
+
+
+def test_deepeval_adapter_requires_explicit_metric_configuration():
+    import pytest
+    from evals.frameworks import evaluate_with_deepeval
+
+    with pytest.raises(ValueError, match="explicitly configured"):
+        evaluate_with_deepeval({})
