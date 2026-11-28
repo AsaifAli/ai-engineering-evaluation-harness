@@ -22,6 +22,65 @@ The runtime no longer starts or exposes MLOps registries, model promotion, n8n o
 
 Legacy database tables are left untouched when upgrading an existing database. New deployments create only the tables needed for application events, replay quality results and the audit record attached to evaluation batches.
 
+
+## Evaluation framework coverage
+
+The default evaluation path remains deterministic and provider-free. EvidenceFlow's RAG pack reports retriever and generator dimensions separately:
+
+- Retriever: Precision@K, Recall@K, MRR, NDCG@K, reference-labelled contextual precision, context recall and context relevance.
+- Evidence: citation completeness and citation correctness.
+- Generator: answer relevance and faithfulness/groundedness.
+- Other applications retain their specialist evaluation packs: QuoteSense document extraction/decision quality and FlowPilot approval, retry and execution-state integrity.
+
+Replay fixture values for answer relevance and faithfulness are supplied reference signals, not live LLM-judge results. Contextual metrics in deterministic replay are computed against labelled relevant document IDs. They should not be confused with semantic LLM-judged RAGAS/DeepEval metrics.
+
+### Optional RAGAS and DeepEval adapters
+
+Third-party frameworks are supported as opt-in evaluator dependencies, not mandatory dependencies of the production dashboard. The harness does not instantiate provider clients, read provider API keys, or make external model calls. The calling application must configure a model/evaluator and explicitly invoke the adapter.
+
+```bash
+pip install -e ".[eval-ragas]"       # RAGAS only
+pip install -e ".[eval-deepeval]"    # DeepEval only
+pip install -e ".[eval-all]"         # both
+```
+
+RAGAS 0.4+ (async collections API):
+
+```python
+from evals.frameworks import evaluate_with_ragas_async
+
+scores = await evaluate_with_ragas_async(
+    {
+        "user_input": "What is the retention period?",
+        "response": "Records are kept for seven years.",
+        "retrieved_contexts": ["The retention policy specifies seven years."],
+        "reference": "Records are retained for seven years.",
+    },
+    llm=my_configured_ragas_llm,
+    embeddings=my_configured_embeddings,
+)
+```
+
+DeepEval:
+
+```python
+from evals.frameworks import evaluate_with_deepeval
+
+scores = evaluate_with_deepeval(
+    {
+        "input": "What is the retention period?",
+        "actual_output": "Records are kept for seven years.",
+        "expected_output": "Records are retained for seven years.",
+        "retrieval_context": ["The retention policy specifies seven years."],
+    },
+    metrics=my_configured_deepeval_metrics,
+)
+```
+
+Only pass synthetic or appropriately redacted samples to external judges. Do not transmit customer documents, chat transcripts, prompts, or business data without a privacy and data-processing review. Framework scores are returned to the caller and are not mixed into replay history or live application-event telemetry automatically.
+
+Further reading: [RAGAS metrics](https://docs.ragas.io/en/latest/concepts/metrics/available_metrics/), [RAGAS 0.4 migration](https://docs.ragas.io/en/stable/howtos/migrations/migrate_from_v03_to_v04/), [DeepEval RAG evaluation](https://deepeval.com/docs/getting-started-rag), [TruLens RAG Triad](https://github.com/truera/trulens/blob/main/docs/getting_started/core_concepts/rag_triad.md).
+
 ## Dashboard
 
 The Render service URL is:
@@ -90,10 +149,14 @@ Open `http://localhost:8000`.
 
 Run the deterministic quality fixtures:
 
-```PYTHONPATH=. python -m evals.project_runner --target all --mode replay```
+```bash
+PYTHONPATH=. python -m evals.project_runner --target all --mode replay
+```
 
 Run tests:
 
-```PYTHONPATH=. python -m pytest -q```
+```bash
+PYTHONPATH=. python -m pytest -q
+```
 
 Replay results are reference measurements against synthetic fixtures. They are not live model benchmarks, customer data or client outcome claims.

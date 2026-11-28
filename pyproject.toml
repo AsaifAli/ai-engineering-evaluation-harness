@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-engineering-evaluation-harness"
+version = "4.1.0"
+description = "Provider-free replay evaluation and optional third-party evaluation adapters"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi==0.165.0",
+  "uvicorn[standard]==0.34.0",
+  "pydantic==2.10.6",
+  "httpx==0.28.1",
+  "psycopg[binary]>=3.2,<4",
+  "upstash-redis>=1.4,<2",
+]
+
+[project.optional-dependencies]
+eval-ragas = ["ragas>=0.4.3,<0.5"]
+eval-deepeval = ["deepeval>=3.0,<4"]
+eval-all = ["ragas>=0.4.3,<0.5", "deepeval>=3.0,<4"]
+test = ["pytest==9.0.3"]
+
+[tool.setuptools.packages.find]
+include = ["app*", "evals*"]
