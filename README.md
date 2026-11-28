@@ -81,6 +81,48 @@ Only pass synthetic or appropriately redacted samples to external judges. Do not
 
 Further reading: [RAGAS metrics](https://docs.ragas.io/en/latest/concepts/metrics/available_metrics/), [RAGAS 0.4 migration](https://docs.ragas.io/en/stable/howtos/migrations/migrate_from_v03_to_v04/), [DeepEval RAG evaluation](https://deepeval.com/docs/getting-started-rag), [TruLens RAG Triad](https://github.com/truera/trulens/blob/main/docs/getting_started/core_concepts/rag_triad.md).
 
+
+## Agent, safety and experiment evaluation
+
+### FlowPilot agent trajectory
+
+FlowPilot now supplements workflow/approval/retry checks with optional ordered tool-trace metrics when a fixture supplies `expected_tool_calls` and `tool_calls`:
+
+- Tool selection precision, recall and F1 (multiset-aware, so repeated calls count).
+- Tool argument accuracy (exact match of the expected tool's argument object).
+- Tool trajectory similarity (longest-common-subsequence score over ordered tool names) and exact match.
+- Step efficiency (optimal step count divided by observed steps, capped at 1).
+
+These are deterministic, reference-labelled metrics. They complement rather than replace LLM-judged DeepEval trajectory metrics such as Task Completion, Step Efficiency, Plan Adherence and Plan Quality, which require richer execution traces and a configured judge. The harness does not collect or expose raw FlowPilot traces through public telemetry.
+
+### Safety evaluation
+
+A reusable `safety` evaluation pack scores detector outputs against human-labelled expected violations: precision, recall, F1 and false-negative rate. It can also score prompt-injection block decisions, refusal correctness, and synthetic canary-token leakage/containment.
+
+This pack is an **evaluation layer, not a safety detector**. It does not infer PII, detect prompt injection, or decide whether content is harmful. Those findings must come from your application guardrails or a separately validated classifier and then be compared with the labelled reference. For leakage tests, use synthetic canary strings only; never place real customer PII in evaluation fixtures.
+
+### Experiment lineage and regression comparison
+
+Replay runs accept an optional experiment identifier and retain model, prompt, dataset and config versions:
+
+```bash
+PYTHONPATH=. python -m evals.project_runner \
+  --target evidenceflow \
+  --model-version model-a \
+  --prompt-version prompt-v3 \
+  --dataset-version support-qa-v2 \
+  --config-version retrieval-v5 \
+  --experiment-id exp-model-a-prompt-v3
+```
+
+Read-only comparison endpoint:
+
+```text
+GET /api/ai-quality/experiments?target=evidenceflow&baseline_experiment_id=exp-model-a-prompt-v3
+```
+
+The response contains per-experiment average score, pass rate, metric averages, deltas against the selected (or earliest) baseline, and regression flags. Older rows without an experiment ID are grouped using model/prompt/config/dataset lineage. Only version identifiers and numerical aggregates are returned; raw prompts, documents, responses and traces are not accepted as grouping fields or exposed by this endpoint.
+
 ## Dashboard
 
 The Render service URL is:
