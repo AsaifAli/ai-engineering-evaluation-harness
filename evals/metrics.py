@@ -73,6 +73,7 @@ def ndcg_at_k(retrieved: Sequence[Any], relevant: Iterable[Any], k: int) -> floa
 
 
 def contextual_precision_at_k(retrieved: Sequence[Any], relevant: Iterable[Any], k: int) -> float:
+    """Reference-labelled analogue of RAGAS/DeepEval contextual precision."""
     truth = set(_stable_unique(relevant))
     if not truth:
         return 1.0
@@ -87,6 +88,7 @@ def contextual_precision_at_k(retrieved: Sequence[Any], relevant: Iterable[Any],
 
 
 def contextual_relevance(retrieved: Sequence[Any], relevant: Iterable[Any]) -> float:
+    """Fraction of retrieved evidence units labelled relevant."""
     ranked = _stable_unique(retrieved)
     if not ranked:
         return 1.0
