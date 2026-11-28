@@ -280,3 +280,107 @@ def evaluate_agent_tools_with_deepeval(
         normalized["success"] = getattr(metric, "success", None)
         results[metric.__class__.__name__] = normalized
     return results
+
+
+
+def _to_ragas_tool_calls(values: Any, *, tool_call_type: Any) -> list[Any]:
+    if not isinstance(values, list):
+        raise ValueError("reference_tool_calls must be a list")
+    converted = []
+    for index, value in enumerate(values, start=1):
+        if isinstance(value, dict):
+            name = str(value.get("name") or value.get("tool") or value.get("tool_name") or "").strip()
+            if not name:
+                raise ValueError(f"reference_tool_calls[{index}] is missing a tool name")
+            arguments = value.get("args", value.get("arguments", {}))
+            if not isinstance(arguments, dict):
+                raise ValueError(f"reference_tool_calls[{index}] args must be an object")
+            converted.append(tool_call_type(name=name, args=arguments))
+        elif hasattr(value, "name") and hasattr(value, "args"):
+            converted.append(value)
+        else:
+            raise ValueError(f"reference_tool_calls[{index}] must be a RAGAS ToolCall or object")
+    return converted
+
+
+def _to_ragas_messages(values: Any, *, message_types: dict[str, Any], tool_call_type: Any) -> list[Any]:
+    if not isinstance(values, list) or not values:
+        raise ValueError("user_input must be a non-empty RAGAS message list")
+    converted = []
+    for index, value in enumerate(values, start=1):
+        if not isinstance(value, dict):
+            # Existing RAGAS HumanMessage/AIMessage/ToolMessage instances pass through.
+            if hasattr(value, "content"):
+                converted.append(value)
+                continue
+            raise ValueError(f"user_input[{index}] must be a RAGAS message or object")
+        role = str(value.get("role") or value.get("type") or "").strip().lower()
+        content = value.get("content", "")
+        if not isinstance(content, str):
+            raise ValueError(f"user_input[{index}] content must be a string")
+        if role in {"user", "human"}:
+            converted.append(message_types["human"](content=content))
+        elif role in {"assistant", "ai"}:
+            calls = _to_ragas_tool_calls(
+                value.get("tool_calls", []),
+                tool_call_type=tool_call_type,
+            )
+            converted.append(message_types["ai"](content=content, tool_calls=calls))
+        elif role == "tool":
+            converted.append(message_types["tool"](content=content))
+        else:
+            raise ValueError(f"user_input[{index}] role must be user, assistant, or tool")
+    return converted
+
+
+async def evaluate_agent_tools_with_ragas(
+    sample: dict[str, Any],
+    *,
+    metrics: Iterable[Any] | None = None,
+) -> dict[str, Any]:
+    """Evaluate an instrumented agent conversation with RAGAS ToolCallAccuracy/F1.
+
+    The sample must contain a RAGAS-style message trace in user_input and expected
+    calls in reference_tool_calls. ToolCallAccuracy checks exact sequence and
+    arguments; ToolCallF1 provides softer unordered precision/recall/F1 scoring.
+    These native metrics do not initialize an LLM provider.
+    """
+    try:
+        from ragas.metrics.collections import ToolCallAccuracy, ToolCallF1
+        from ragas.messages import AIMessage, HumanMessage, ToolMessage, ToolCall
+    except ImportError as exc:
+        raise RuntimeError("Install the optional extra: pip install -e '.[eval-ragas]'") from exc
+
+    messages = _to_ragas_messages(
+        sample.get("user_input"),
+        message_types={
+            "human": HumanMessage,
+            "ai": AIMessage,
+            "tool": ToolMessage,
+        },
+        tool_call_type=ToolCall,
+    )
+    expected_calls = _to_ragas_tool_calls(
+        sample.get("reference_tool_calls", []),
+        tool_call_type=ToolCall,
+    )
+    configured_metrics = list(metrics) if metrics is not None else [
+        ToolCallAccuracy(),
+        ToolCallF1(),
+    ]
+    if not configured_metrics:
+        raise ValueError("At least one RAGAS tool metric must be configured")
+
+    results: dict[str, Any] = {}
+    for metric in configured_metrics:
+        name = str(getattr(metric, "name", None) or metric.__class__.__name__)
+        result = await metric.ascore(
+            user_input=messages,
+            reference_tool_calls=expected_calls,
+        )
+        results[name] = _normalize_result(result)
+    return {
+        "framework": "ragas",
+        "metric_count": len(results),
+        "metrics": results,
+    }
