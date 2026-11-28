@@ -5,8 +5,6 @@ import pytest
 
 from evals.frameworks import evaluate_ragas_dataset
 
-eval({})
-
 
 
 def _fake_ragas_collections(monkeypatch):
@@ -88,7 +86,9 @@ def test_default_ragas_metrics_work_without_reference(monkeypatch):
 
 
 def test_ragas_dataset_runner_rejects_mixed_reference_presence():
-    import pytest
+    class FakeMetric:
+        async def ascore(self, **sample):
+            return SimpleNamespace(value=0.8)
 
     with pytest.raises(ValueError, match="consistently include reference"):
         asyncio.run(evaluate_ragas_dataset(
@@ -96,5 +96,5 @@ def test_ragas_dataset_runner_rejects_mixed_reference_presence():
                 {"id": "a", "user_input": "q", "response": "a", "retrieved_contexts": [], "reference": "a"},
                 {"id": "b", "user_input": "q", "response": "b", "retrieved_contexts": []},
             ],
-            metrics=[FakeRagasMetric()],
+            metrics=[FakeMetric()],
         ))
