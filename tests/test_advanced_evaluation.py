@@ -3,6 +3,8 @@ import pytest
 from evals.packs.workflow_orchestration import evaluate as evaluate_flowpilot
 from evals.packs.safety import evaluate as evaluate_safety
 from evals.experiments import compare_experiments
+from evals.project_runner import load_cases
+from evals.project_evals import evaluate_case
 
 
 def test_flowpilot_scores_tool_selection_arguments_and_trajectory_order():
@@ -111,3 +113,22 @@ def test_experiment_comparison_aggregates_metrics_and_flags_regressions():
 def test_experiment_comparison_rejects_unknown_grouping_fields():
     with pytest.raises(ValueError):
         compare_experiments([], group_by=("raw_prompt",))
+
+
+
+def test_flowpilot_replay_dataset_covers_agent_tool_trajectory():
+    case = next(
+        item for item in load_cases("flowpilot")
+        if item["id"] == "agent_tool_trajectory_success"
+    )
+    result = evaluate_case(
+        "flowpilot",
+        case["id"],
+        case["expected"],
+        case["actual"],
+        mode="replay",
+    )
+    assert result.passed
+    assert result.metrics["tool_selection_f1"] == 1.0
+    assert result.metrics["tool_argument_accuracy"] == 1.0
+    assert result.metrics["tool_trajectory_similarity"] == 1.0
