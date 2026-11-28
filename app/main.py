@@ -420,7 +420,10 @@ def application_events(project: str | None = None, limit: int = 60):
 
 @app.get("/api/application-summary")
 def application_summary():
-    events = query_application_events(limit=1000)
+    events = [
+        event for event in query_application_events(limit=1000)
+        if event.get("event_type") != "evaluation.completed"
+    ]
     summary = {}
     for project in ("evidenceflow", "quotesense", "flowpilot"):
         rows = [row for row in events if row["project"] == project]
